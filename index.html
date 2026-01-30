@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Verificamex</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .debug-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #e9ecef;
+        }
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .debug-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .debug-buttons button {
+            padding: 8px 12px;
+            font-size: 12px;
+            background: #6c757d;
+        }
+        .debug-buttons button:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🆔 Demo Verificamex</h1>
+        <p class="warning">⚠️ SOLO PARA DESARROLLO - Token visible</p>
+        
+        <div class="debug-panel">
+            <h3>🔧 Panel de Debug</h3>
+            <div class="debug-buttons">
+                <button onclick="testSimpleEndpoint()">🔍 Probar OCR Simple</button>
+                <button onclick="testWithSmallImage()">🧪 Imagen Pequeña</button>
+                <button onclick="validateCURP('XEXX010101HNEXXXA4')">📄 Probar CURP</button>
+                <button onclick="adjustCameraSettings()">⚙️ Baja Calidad</button>
+                <button onclick="console.log('Photos:', photos)">📊 Ver Fotos</button>
+            </div>
+        </div>
+        
+        <div class="steps">
+            <!-- Paso 1: INE Frontal -->
+            <div class="step active" id="step1">
+                <h2>Paso 1: INE Frontal</h2>
+                <p><small><strong>IMPORTANTE:</strong> Usa buena iluminación y acerca el INE</small></p>
+                <div class="camera-container">
+                    <video id="video1" autoplay playsinline></video>
+                    <button onclick="capturePhoto(1)">📸 Tomar Foto</button>
+                    <button onclick="useTestImage(1)" style="background: #6c757d;">
+                        🧪 Usar Imagen de Prueba
+                    </button>
+                </div>
+                <div class="preview" id="preview1"></div>
+            </div>
+            
+            <!-- Paso 2: INE Trasero -->
+            <div class="step" id="step2">
+                <h2>Paso 2: INE Trasero (Opcional)</h2>
+                <div class="camera-container">
+                    <video id="video2" autoplay playsinline></video>
+                    <button onclick="capturePhoto(2)">📸 Tomar Foto</button>
+                    <button onclick="skipStep(2)" style="background: #6c757d;">
+                        ⏭️ Saltar
+                    </button>
+                </div>
+                <div class="preview" id="preview2"></div>
+            </div>
+            
+            <!-- Paso 3: Selfie -->
+            <div class="step" id="step3">
+                <h2>Paso 3: Selfie</h2>
+                <p>Sonríe y mira a la cámara</p>
+                <div class="camera-container">
+                    <video id="video3" autoplay playsinline></video>
+                    <button onclick="capturePhoto(3)">📸 Tomar Selfie</button>
+                    <button onclick="skipStep(3)" style="background: #6c757d;">
+                        ⏭️ Saltar
+                    </button>
+                </div>
+                <div class="preview" id="preview3"></div>
+            </div>
+            
+            <!-- Paso 4: Validar -->
+            <div class="step" id="step4">
+                <h2>Paso 4: Validar</h2>
+                <div style="margin: 20px 0;">
+                    <button onclick="validateIdentity()" class="validate-btn">
+                        🚀 Validar con OCR
+                    </button>
+                    <button onclick="tryComparison()" style="background: #ffc107; color: #000;">
+                        😊 Comparación Facial
+                    </button>
+                </div>
+                
+                <div id="loading" style="display:none;">
+                    <div class="spinner"></div>
+                    <p>Procesando con Verificamex...</p>
+                </div>
+                <div id="result"></div>
+            </div>
+        </div>
+        
+        <div class="token-info">
+            <small>Token: <span id="token-preview">****************</span></small>
+            <br>
+            <small><strong>Formato requerido:</strong> data:image/jpeg;base64,...</small>
+            <br>
+            <small><strong>Tamaño máximo recomendado:</strong> ~150KB</small>
+        </div>
+    </div>
+    
+    <script src="camera.js"></script>
+    <script src="app.js"></script>
+    
+    <script>
+        // Función para usar imagen de prueba
+        function useTestImage(stepNumber) {
+            console.log(`Usando imagen de prueba para paso ${stepNumber}`);
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 250;
+            const ctx = canvas.getContext('2d');
+            
+            // Crear INE simulado
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, 400, 250);
+            ctx.fillStyle = '#0066cc';
+            ctx.fillRect(0, 0, 400, 60);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('INSTITUTO NACIONAL ELECTORAL', 20, 35);
+            
+            ctx.fillStyle = 'black';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('CREDENCIAL PARA VOTAR', 20, 90);
+            
+            ctx.font = '14px Arial';
+            ctx.fillText('Nombre: JUAN PEREZ GARCIA', 20, 120);
+            ctx.fillText('CURP: PEGF800101HDFRRR09', 20, 145);
+            ctx.fillText('Dirección: CALLE FICTICIA 123', 20, 170);
+            ctx.fillText('Clave de elector: ABCDEF123456', 20, 195);
+            ctx.fillText('Fecha nacimiento: 01/01/1980', 20, 220);
+            
+            const testImage = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Guardar según el paso
+            switch(stepNumber) {
+                case 1:
+                    photos.ine_front = testImage;
+                    break;
+                case 2:
+                    photos.ine_back = testImage;
+                    break;
+                case 3:
+                    photos.selfie = testImage;
+                    break;
+            }
+            
+            // Mostrar preview
+            const preview = document.getElementById(`preview${stepNumber}`);
+            preview.innerHTML = `<img src="${testImage}" alt="Prueba ${stepNumber}" style="max-width: 200px;">`;
+            
+            // Avanzar al siguiente paso
+            setTimeout(() => {
+                showStep(stepNumber + 1);
+                if (stepNumber < 3) {
+                    initCamera(stepNumber + 1);
+                }
+            }, 500);
+        }
+        
+        // Función para saltar pasos
+        function skipStep(stepNumber) {
+            showStep(stepNumber + 1);
+            if (stepNumber < 3) {
+                initCamera(stepNumber + 1);
+            }
+        }
+        
+        // Hacer globales
+        window.useTestImage = useTestImage;
+        window.skipStep = skipStep;
+    </script>
+</body>
+</html>
