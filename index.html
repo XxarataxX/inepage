@@ -3,37 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Verificamex</title>
+    <title>Demo Verificamex - Cámara Frontal</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-        .debug-panel {
-            background: #f8f9fa;
-            padding: 15px;
+        .camera-info {
+            background: #e7f3ff;
+            padding: 12px;
             border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #e9ecef;
-        }
-        .debug-panel h3 {
-            margin-top: 0;
-            color: #6c757d;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
             font-size: 14px;
         }
-        .debug-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        .debug-buttons button {
-            padding: 8px 12px;
-            font-size: 12px;
-            background: #6c757d;
-        }
-        .debug-buttons button:hover {
-            background: #5a6268;
+        
+        .camera-info p {
+            margin: 5px 0;
         }
         
-        /* Estilos para botones de cámara */
+        .step-indicator {
+            background: #6c757d;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .selfie-video {
+            transform: scaleX(-1); /* Efecto espejo para selfie */
+        }
+        
         .camera-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -46,47 +45,58 @@
             min-width: 140px;
         }
         
-        .selfie-video {
-            transform: scaleX(-1);
+        @media (max-width: 768px) {
+            .camera-buttons {
+                flex-direction: column;
+            }
+            
+            .camera-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🆔 Demo Verificamex</h1>
+        <h1>📱 Demo Verificamex</h1>
         <p class="warning">⚠️ SOLO PARA DESARROLLO - Token visible</p>
         
-        <!-- Panel de Debug Mejorado -->
+        <div class="camera-info">
+            <p><strong>📸 Modo cámara frontal única:</strong></p>
+            <p>• Usamos solo la cámara frontal para todos los pasos</p>
+            <p>• Selfie se muestra en espejo (más natural)</p>
+            <p>• INE se captura normalmente</p>
+            <p>• <span id="step-indicator">Paso 1 de 4</span></p>
+        </div>
+        
         <div class="debug-panel">
-            <h3>🔧 Panel de Debug - Cámaras</h3>
+            <h3>🔧 Controles de Cámara</h3>
             <div class="debug-buttons">
-                <button onclick="checkCameraStatus()">📊 Estado Cámaras</button>
-                <button onclick="forceCameraReset()">🔄 Forzar Reinicio</button>
-                <button onclick="startFrontCamera()">😊 Forzar Cámara Frontal</button>
+                <button onclick="restartCamera()">🔄 Reiniciar Cámara</button>
                 <button onclick="testSimpleEndpoint()">🔍 Probar OCR</button>
-                <button onclick="validateCURP('XEXX010101HNEXXXA4')">📄 Probar CURP</button>
+                <button onclick="testAllEndpoints()">🔄 Probar Todo</button>
+                <button onclick="console.log('Fotos:', photos)">📊 Ver Fotos</button>
             </div>
         </div>
         
         <div class="steps">
             <!-- Paso 1: INE Frontal -->
             <div class="step active" id="step1">
-                <h2>Paso 1: INE Frontal</h2>
-                <p><small><strong>IMPORTANTE:</strong> Usa buena iluminación y acerca el INE</small></p>
+                <h2>📄 Paso 1: INE Frontal</h2>
+                <p><small>Apunta la cámara frontal al INE</small></p>
                 
                 <div class="camera-container">
                     <video id="video1" autoplay playsinline></video>
                     
                     <div class="camera-buttons">
-                        <button onclick="capturePhoto(1)" class="camera-button">📸 Capturar Foto</button>
-                        <button onclick="useTestImage(1)" class="camera-button" style="background: #6c757d;">
+                        <button onclick="capturePhoto(1)" class="camera-button" style="background: #28a745;">
+                            📸 Capturar INE Frontal
+                        </button>
+                        <button onclick="useTestImage(1)" class="camera-button" style="background: #17a2b8;">
                             🧪 Usar Imagen de Prueba
                         </button>
-                        <button onclick="forceCameraReset()" class="camera-button" style="background: #ffc107; color: #000;">
-                            🔄 Reiniciar Cámaras
-                        </button>
-                        <button onclick="skipStep(1)" class="camera-button" style="background: #dc3545;">
-                            ⏭️ Saltar Paso
+                        <button onclick="skipStep(1)" class="camera-button" style="background: #6c757d;">
+                            ⏭️ Saltar INE Frontal
                         </button>
                     </div>
                 </div>
@@ -96,21 +106,21 @@
             
             <!-- Paso 2: INE Trasero -->
             <div class="step" id="step2">
-                <h2>Paso 2: INE Trasero (Opcional)</h2>
+                <h2>📄 Paso 2: INE Trasero (Opcional)</h2>
+                <p><small>Voltea el INE y captura la parte trasera</small></p>
                 
                 <div class="camera-container">
                     <video id="video2" autoplay playsinline></video>
                     
                     <div class="camera-buttons">
-                        <button onclick="capturePhoto(2)" class="camera-button">📸 Capturar Foto</button>
-                        <button onclick="useTestImage(2)" class="camera-button" style="background: #6c757d;">
+                        <button onclick="capturePhoto(2)" class="camera-button" style="background: #28a745;">
+                            📸 Capturar INE Trasero
+                        </button>
+                        <button onclick="useTestImage(2)" class="camera-button" style="background: #17a2b8;">
                             🧪 Usar Imagen de Prueba
                         </button>
-                        <button onclick="forceCameraReset()" class="camera-button" style="background: #ffc107; color: #000;">
-                            🔄 Reiniciar Cámaras
-                        </button>
-                        <button onclick="skipStep(2)" class="camera-button" style="background: #dc3545;">
-                            ⏭️ Saltar Paso
+                        <button onclick="skipStep(2)" class="camera-button" style="background: #6c757d;">
+                            ⏭️ Saltar INE Trasero
                         </button>
                     </div>
                 </div>
@@ -120,24 +130,20 @@
             
             <!-- Paso 3: Selfie -->
             <div class="step" id="step3">
-                <h2>Paso 3: Selfie</h2>
-                <p>Sonríe y mira a la cámara</p>
+                <h2>😊 Paso 3: Selfie</h2>
+                <p><small>Mira a la cámara frontal y sonríe</small></p>
                 
                 <div class="camera-container">
                     <video id="video3" autoplay playsinline class="selfie-video"></video>
                     
                     <div class="camera-buttons">
-                        <button onclick="capturePhoto(3)" class="camera-button">📸 Capturar Selfie</button>
-                        <button onclick="startFrontCamera()" class="camera-button" style="background: #17a2b8;">
-                            😊 Activar Cámara Frontal
+                        <button onclick="capturePhoto(3)" class="camera-button" style="background: #28a745;">
+                            😊 Capturar Selfie
                         </button>
-                        <button onclick="useTestImage(3)" class="camera-button" style="background: #6c757d;">
+                        <button onclick="useTestImage(3)" class="camera-button" style="background: #17a2b8;">
                             🧪 Usar Selfie de Prueba
                         </button>
-                        <button onclick="forceCameraReset()" class="camera-button" style="background: #ffc107; color: #000;">
-                            🔄 Reiniciar Cámaras
-                        </button>
-                        <button onclick="skipStep(3)" class="camera-button" style="background: #dc3545;">
+                        <button onclick="skipStep(3)" class="camera-button" style="background: #6c757d;">
                             ⏭️ Saltar Selfie
                         </button>
                     </div>
@@ -148,17 +154,18 @@
             
             <!-- Paso 4: Validar -->
             <div class="step" id="step4">
-                <h2>Paso 4: Validar con Verificamex</h2>
+                <h2>✅ Paso 4: Validar</h2>
+                <p><small>Envía las fotos a Verificamex para validación</small></p>
                 
-                <div style="margin: 20px 0;">
-                    <button onclick="validateIdentity()" class="validate-btn">
-                        🚀 Validar con OCR
+                <div class="camera-buttons">
+                    <button onclick="validateIdentity()" class="validate-btn" style="background: #007bff;">
+                        🚀 Validar con Verificamex
                     </button>
                     <button onclick="tryComparison()" style="background: #ffc107; color: #000;">
-                        😊 Comparación Facial
+                        😊 Solo Comparación Facial
                     </button>
-                    <button onclick="testAllEndpoints()" style="background: #17a2b8;">
-                        🔄 Probar Todos los Endpoints
+                    <button onclick="resetDemo()" style="background: #6c757d;">
+                        🔄 Comenzar de Nuevo
                     </button>
                 </div>
                 
@@ -172,13 +179,11 @@
         </div>
         
         <div class="token-info">
-            <small>Token: <span id="token-preview">****************</span></small>
+            <small>🔐 Token activo: <span id="token-preview">****************</span></small>
             <br>
-            <small><strong>Formato requerido:</strong> data:image/jpeg;base64,...</small>
+            <small>📸 Cámara: <span id="camera-status">Frontal</span></small>
             <br>
-            <small><strong>Tamaño máximo recomendado:</strong> ~150KB</small>
-            <br>
-            <small><strong>Modo cámara:</strong> <span id="camera-mode">Normal</span></small>
+            <small>🔄 Última acción: <span id="last-action">Esperando...</span></small>
         </div>
     </div>
     
@@ -186,169 +191,47 @@
     <script src="app.js"></script>
     
     <script>
-        // Función para usar imagen de prueba
-        function useTestImage(stepNumber) {
-            console.log(`Usando imagen de prueba para paso ${stepNumber}`);
-            
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            if (stepNumber === 1 || stepNumber === 2) {
-                // INE frontal/trasero
-                canvas.width = 400;
-                canvas.height = 250;
-                
-                // Crear INE simulado
-                ctx.fillStyle = '#f0f0f0';
-                ctx.fillRect(0, 0, 400, 250);
-                ctx.fillStyle = '#0066cc';
-                ctx.fillRect(0, 0, 400, 60);
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 18px Arial';
-                ctx.fillText('INSTITUTO NACIONAL ELECTORAL', 20, 35);
-                
-                ctx.fillStyle = 'black';
-                ctx.font = 'bold 16px Arial';
-                ctx.fillText('CREDENCIAL PARA VOTAR', 20, 90);
-                
-                ctx.font = '14px Arial';
-                ctx.fillText('Nombre: JUAN PEREZ GARCIA', 20, 120);
-                ctx.fillText('CURP: PEGF800101HDFRRR09', 20, 145);
-                ctx.fillText('Dirección: CALLE FICTICIA 123', 20, 170);
-                ctx.fillText('Clave de elector: ABCDEF123456', 20, 195);
-                ctx.fillText('Fecha nacimiento: 01/01/1980', 20, 220);
-                
-            } else if (stepNumber === 3) {
-                // Selfie
-                canvas.width = 300;
-                canvas.height = 300;
-                
-                // Cara
-                ctx.fillStyle = '#ffdbac';
-                ctx.beginPath();
-                ctx.arc(150, 150, 100, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Ojos
-                ctx.fillStyle = 'black';
-                ctx.beginPath();
-                ctx.arc(120, 130, 15, 0, Math.PI * 2);
-                ctx.arc(180, 130, 15, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Boca sonriente
-                ctx.beginPath();
-                ctx.arc(150, 180, 40, 0, Math.PI);
-                ctx.stroke();
+        // Actualizar estado de cámara
+        function updateCameraStatus(status) {
+            const statusEl = document.getElementById('camera-status');
+            if (statusEl) statusEl.textContent = status;
+        }
+        
+        // Actualizar última acción
+        function updateLastAction(action) {
+            const actionEl = document.getElementById('last-action');
+            if (actionEl) actionEl.textContent = action;
+        }
+        
+        // Sobrescribir funciones para tracking
+        const originalCapturePhoto = window.capturePhoto;
+        window.capturePhoto = function(stepNumber) {
+            const stepNames = ['', 'INE Frontal', 'INE Trasero', 'Selfie'];
+            updateLastAction(`Capturando ${stepNames[stepNumber]}`);
+            return originalCapturePhoto(stepNumber);
+        };
+        
+        const originalUseTestImage = window.useTestImage;
+        window.useTestImage = function(stepNumber) {
+            updateLastAction('Usando imagen de prueba');
+            return originalUseTestImage(stepNumber);
+        };
+        
+        const originalInitFrontCamera = window.initFrontCamera;
+        window.initFrontCamera = async function() {
+            updateLastAction('Iniciando cámara...');
+            const result = await originalInitFrontCamera();
+            if (result) {
+                updateCameraStatus('Frontal ✅');
+                updateLastAction('Cámara lista');
+            } else {
+                updateCameraStatus('Frontal ❌');
+                updateLastAction('Error en cámara');
             }
-            
-            const testImage = canvas.toDataURL('image/jpeg', 0.8);
-            
-            // Guardar según el paso
-            switch(stepNumber) {
-                case 1:
-                    photos.ine_front = testImage;
-                    break;
-                case 2:
-                    photos.ine_back = testImage;
-                    break;
-                case 3:
-                    photos.selfie = testImage;
-                    break;
-            }
-            
-            // Mostrar preview
-            const preview = document.getElementById(`preview${stepNumber}`);
-            preview.innerHTML = `
-                <div style="text-align: center;">
-                    <img src="${testImage}" alt="Prueba ${stepNumber}" style="max-width: 200px; border-radius: 8px;">
-                    <p style="margin-top: 5px; font-size: 14px; color: #28a745;">
-                        🧪 Imagen de prueba ${stepNumber}
-                    </p>
-                </div>
-            `;
-            
-            // Avanzar al siguiente paso
-            setTimeout(() => {
-                showStep(stepNumber + 1);
-            }, 500);
-        }
+            return result;
+        };
         
-        // Función para saltar pasos
-        function skipStep(stepNumber) {
-            showStep(stepNumber + 1);
-        }
-        
-        // Función para probar todos los endpoints
-        async function testAllEndpoints() {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '<p>Probando todos los endpoints...</p>';
-            
-            try {
-                // 1. Probar OCR
-                const ocrResult = await validateOCR();
-                
-                // 2. Probar CURP
-                const curpResult = await validateCURP('XEXX010101HNEXXXA4');
-                
-                // 3. Probar RFC
-                const rfcResponse = await fetch('https://api.verificamex.com/identity/v1/miscellaneous/sat/rfc', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${VERIFICAMEX_TOKEN}`
-                    },
-                    body: JSON.stringify({ rfc: "XAXX010101000" })
-                });
-                const rfcResult = await rfcResponse.json();
-                
-                resultDiv.innerHTML = `
-                    <div class="result success">
-                        <h2>✅ TODOS LOS ENDPOINTS FUNCIONAN</h2>
-                        
-                        <div class="details">
-                            <h3>OCR de INE:</h3>
-                            <pre>${JSON.stringify(ocrResult.data ? {status: 'OK', object: ocrResult.data.object} : ocrResult, null, 2)}</pre>
-                            
-                            <h3>Validación CURP:</h3>
-                            <pre>${JSON.stringify(curpResult.data ? {status: curpResult.data.status, message: curpResult.data.message} : curpResult, null, 2)}</pre>
-                            
-                            <h3>Validación RFC:</h3>
-                            <pre>${JSON.stringify(rfcResult.data ? {status: rfcResult.data.status, message: rfcResult.data.message} : rfcResult, null, 2)}</pre>
-                        </div>
-                        
-                        <p><strong>Conclusión:</strong> El token funciona correctamente para todos los servicios.</p>
-                        
-                        <button onclick="resetDemo()" style="background: #4CAF50; margin-top: 15px;">
-                            🚀 Comenzar Nueva Validación
-                        </button>
-                    </div>
-                `;
-                
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="error">
-                        <h3>❌ Error en pruebas</h3>
-                        <p>${error.message}</p>
-                        <p>Consulta la consola para más detalles.</p>
-                    </div>
-                `;
-            }
-        }
-        
-        // Actualizar modo de cámara
-        function updateCameraMode(mode) {
-            document.getElementById('camera-mode').textContent = mode;
-        }
-        
-        // Hacer funciones globales
-        window.useTestImage = useTestImage;
-        window.skipStep = skipStep;
-        window.testAllEndpoints = testAllEndpoints;
-        window.updateCameraMode = updateCameraMode;
-        
-        // Inicializar cuando cargue la página
+        // Inicialización cuando cargue la página
         document.addEventListener('DOMContentLoaded', function() {
             // Mostrar token parcial
             const tokenPreview = document.getElementById('token-preview');
@@ -357,8 +240,10 @@
                 tokenPreview.textContent = visiblePart + '...';
             }
             
-            console.log('Demo Verificamex cargada correctamente');
-            console.log('Token disponible:', typeof VERIFICAMEX_TOKEN !== 'undefined');
+            // Iniciar cámara frontal
+            setTimeout(() => {
+                initFrontCamera();
+            }, 500);
         });
     </script>
 </body>
