@@ -11,7 +11,7 @@ let currentStep = 1;
 let cameraStream = null;
 
 // ============================================
-// INICIALIZACIÓN SIMPLIFICADA
+// INICIALIZACIÓN
 // ============================================
 
 // Inicializar cámaras
@@ -26,17 +26,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mostrar solo el primer paso
     showStep(1);
     
-    // Iniciar cámara frontal automáticamente
-    initFrontCamera();
+    // Iniciar cámara trasera automáticamente
+    initBackCamera();
 });
 
 // ============================================
-// FUNCIÓN ÚNICA PARA INICIAR CÁMARA FRONTAL
+// FUNCIÓN ÚNICA PARA INICIAR CÁMARA TRASERA
 // ============================================
 
-async function initFrontCamera() {
+async function initBackCamera() {
     try {
-        console.log('=== INICIANDO CÁMARA FRONTAL ===');
+        console.log('=== INICIANDO CÁMARA TRASERA ===');
         
         // Detener stream anterior si existe
         if (cameraStream) {
@@ -44,10 +44,10 @@ async function initFrontCamera() {
             cameraStream = null;
         }
         
-        // Configuración optimizada para móvil
+        // Configuración para cámara trasera (environment)
         const constraints = {
             video: {
-                facingMode: 'user',
+                facingMode: { ideal: 'environment' },
                 width: { ideal: 640 },
                 height: { ideal: 480 },
                 frameRate: { ideal: 24 }
@@ -55,23 +55,18 @@ async function initFrontCamera() {
             audio: false
         };
         
-        console.log('Solicitando cámara frontal con:', constraints);
+        console.log('Solicitando cámara trasera con:', constraints);
         
         // Obtener stream
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
         
-        console.log('✅ Cámara frontal obtenida correctamente');
+        console.log('✅ Cámara trasera obtenida correctamente');
         
         // Asignar a TODOS los videos (mismo stream para todos)
         for (let i = 1; i <= 3; i++) {
             const video = document.getElementById(`video${i}`);
             if (video) {
                 video.srcObject = cameraStream;
-                
-                // Para selfie (paso 3), aplicar espejo
-                if (i === 3) {
-                    video.style.transform = 'scaleX(-1)';
-                }
                 
                 // Forzar reproducción
                 video.play().catch(e => {
@@ -82,30 +77,77 @@ async function initFrontCamera() {
             }
         }
         
+        updateCameraStatus('Trasera ✅');
+        updateLastAction('Cámara lista');
         return true;
         
     } catch (error) {
-        console.error('❌ ERROR iniciando cámara frontal:', error);
+        console.error('❌ ERROR iniciando cámara trasera:', error);
         
-        let errorMessage = 'Error con la cámara frontal: ';
+        let errorMessage = 'Error con la cámara trasera: ';
         
         if (error.name === 'NotAllowedError') {
             errorMessage = 'Permiso denegado. Por favor permite el acceso a la cámara.';
         } else if (error.name === 'NotFoundError') {
-            errorMessage = 'No se encontró cámara frontal.';
+            errorMessage = 'No se encontró cámara trasera. Intentando con frontal...';
+            // Intentar con cámara frontal como fallback
+            return await initFrontCameraAsFallback();
         } else if (error.name === 'NotReadableError') {
             errorMessage = 'La cámara está siendo usada por otra aplicación.';
+        } else if (error.name === 'OverconstrainedError') {
+            errorMessage = 'Cámara trasera no disponible. Intentando con frontal...';
+            return await initFrontCameraAsFallback();
         } else {
             errorMessage += error.message;
         }
         
         alert(errorMessage + '\n\nPuedes usar imágenes de prueba mientras solucionamos esto.');
+        updateCameraStatus('Trasera ❌');
+        updateLastAction('Error en cámara');
+        return false;
+    }
+}
+
+// Fallback: usar cámara frontal si la trasera falla
+async function initFrontCameraAsFallback() {
+    try {
+        console.log('Intentando cámara frontal como fallback...');
+        
+        const constraints = {
+            video: {
+                facingMode: 'user',
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            },
+            audio: false
+        };
+        
+        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Asignar a videos
+        for (let i = 1; i <= 3; i++) {
+            const video = document.getElementById(`video${i}`);
+            if (video) {
+                video.srcObject = cameraStream;
+                video.play();
+            }
+        }
+        
+        console.log('✅ Cámara frontal iniciada como fallback');
+        updateCameraStatus('Frontal (fallback) ✅');
+        updateLastAction('Cámara frontal activada');
+        return true;
+        
+    } catch (error) {
+        console.error('Error incluso con cámara frontal:', error);
+        updateCameraStatus('Sin cámara ❌');
+        updateLastAction('Error en ambas cámaras');
         return false;
     }
 }
 
 // ============================================
-// FUNCIÓN DE CAPTURA SIMPLIFICADA
+// FUNCIÓN DE CAPTURA
 // ============================================
 
 function capturePhoto(stepNumber) {
@@ -129,14 +171,8 @@ function capturePhoto(stepNumber) {
         canvas.width = width;
         canvas.height = height;
         
-        // Para selfie, mantener espejo natural
-        if (stepNumber === 3) {
-            // Selfie: mantener orientación normal (ya está espejado en video)
-            context.drawImage(video, 0, 0, width, height);
-        } else {
-            // INE: rotar si es necesario (para documento físico)
-            context.drawImage(video, 0, 0, width, height);
-        }
+        // Dibujar video en canvas
+        context.drawImage(video, 0, 0, width, height);
         
         // Convertir a data URL
         const imageData = canvas.toDataURL('image/jpeg', 0.7);
@@ -163,10 +199,12 @@ function capturePhoto(stepNumber) {
                 <img src="${imageData}" alt="Foto ${stepNumber}" 
                      style="max-width: 200px; border-radius: 8px; border: 2px solid #28a745;">
                 <p style="margin-top: 5px; font-size: 14px; color: #28a745;">
-                    ✅ ${stepNumber === 3 ? 'Selfie' : 'INE'} capturada
+                    ✅ ${getStepName(stepNumber)} capturada
                 </p>
             </div>
         `;
+        
+        updateLastAction(`${getStepName(stepNumber)} capturada`);
         
         // Avanzar al siguiente paso
         setTimeout(() => {
@@ -176,6 +214,17 @@ function capturePhoto(stepNumber) {
     } catch (error) {
         console.error('Error capturando foto:', error);
         alert('Error al capturar la foto: ' + error.message);
+        updateLastAction('Error capturando foto');
+    }
+}
+
+// Obtener nombre del paso
+function getStepName(stepNumber) {
+    switch(stepNumber) {
+        case 1: return 'INE Frontal';
+        case 2: return 'INE Trasero';
+        case 3: return 'Selfie';
+        default: return 'Foto';
     }
 }
 
@@ -215,6 +264,7 @@ function updateStepIndicator(step) {
 // Reiniciar cámara
 async function restartCamera() {
     console.log('Reiniciando cámara...');
+    updateLastAction('Reiniciando cámara...');
     
     // Detener stream actual
     if (cameraStream) {
@@ -234,12 +284,17 @@ async function restartCamera() {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     // Reiniciar
-    return await initFrontCamera();
+    const result = await initBackCamera();
+    if (result) {
+        updateLastAction('Cámara reiniciada');
+    }
+    return result;
 }
 
 // Función para usar imagen de prueba
 function useTestImage(stepNumber) {
     console.log(`Usando imagen de prueba para paso ${stepNumber}`);
+    updateLastAction('Usando imagen de prueba');
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -264,24 +319,31 @@ function useTestImage(stepNumber) {
         ctx.fillText('Dirección: CALLE DEMO 123', 20, 160);
         
     } else if (stepNumber === 3) {
-        // Selfie
+        // Selfie con cámara trasera (persona frente a espejo)
         canvas.width = 300;
         canvas.height = 300;
         
+        // Fondo
         ctx.fillStyle = '#e0e0e0';
         ctx.fillRect(0, 0, 300, 300);
-        ctx.fillStyle = '#ffdbac';
+        
+        // Persona (vista desde atrás con cámara trasera)
+        ctx.fillStyle = '#333';
         ctx.beginPath();
-        ctx.arc(150, 150, 80, 0, Math.PI * 2);
+        ctx.arc(150, 100, 40, 0, Math.PI * 2); // Cabeza
         ctx.fill();
-        ctx.fillStyle = 'black';
-        ctx.beginPath();
-        ctx.arc(120, 130, 10, 0, Math.PI * 2);
-        ctx.arc(180, 130, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(150, 180, 30, 0, Math.PI);
-        ctx.stroke();
+        
+        // Cuerpo
+        ctx.fillRect(130, 140, 40, 80);
+        
+        // Brazos
+        ctx.fillRect(100, 150, 30, 10);
+        ctx.fillRect(170, 150, 30, 10);
+        
+        // Indicador de selfie con cámara trasera
+        ctx.fillStyle = '#007bff';
+        ctx.font = '12px Arial';
+        ctx.fillText('Selfie con cámara trasera', 80, 250);
     }
     
     const testImage = canvas.toDataURL('image/jpeg', 0.8);
@@ -320,12 +382,14 @@ function useTestImage(stepNumber) {
 // Saltar paso
 function skipStep(stepNumber) {
     console.log(`Saltando paso ${stepNumber}`);
+    updateLastAction(`Saltando paso ${stepNumber}`);
     showStep(stepNumber + 1);
 }
 
 // Reiniciar demo completa
 function resetDemo() {
     console.log('=== REINICIANDO DEMO COMPLETA ===');
+    updateLastAction('Reiniciando demo...');
     
     // Resetear fotos
     photos = {
@@ -357,14 +421,32 @@ function resetDemo() {
     }, 300);
     
     console.log('Demo reiniciada');
+    updateLastAction('Demo reiniciada');
 }
 
 // ============================================
-// FUNCIONES GLOBALES
+// FUNCIONES DE ESTADO (definidas en HTML)
 // ============================================
 
-window.initFrontCamera = initFrontCamera;
+// Estas funciones se definen en el HTML
+function updateCameraStatus(status) {
+    const statusEl = document.getElementById('camera-status');
+    if (statusEl) statusEl.textContent = status;
+}
+
+function updateLastAction(action) {
+    const actionEl = document.getElementById('last-action');
+    if (actionEl) actionEl.textContent = action;
+}
+
+// ============================================
+// HACER FUNCIONES GLOBALES
+// ============================================
+
+window.initBackCamera = initBackCamera;
 window.restartCamera = restartCamera;
 window.useTestImage = useTestImage;
 window.skipStep = skipStep;
 window.resetDemo = resetDemo;
+window.capturePhoto = capturePhoto;
+window.showStep = showStep;

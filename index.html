@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Verificamex - Cámara Frontal</title>
+    <title>Demo Verificamex - Cámara Trasera</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         .camera-info {
@@ -29,10 +29,6 @@
             margin-bottom: 10px;
         }
         
-        .selfie-video {
-            transform: scaleX(-1); /* Efecto espejo para selfie */
-        }
-        
         .camera-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -43,6 +39,16 @@
         .camera-button {
             flex: 1;
             min-width: 140px;
+        }
+        
+        .selfie-instruction {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #ffeaa7;
+            font-size: 14px;
         }
         
         @media (max-width: 768px) {
@@ -62,10 +68,9 @@
         <p class="warning">⚠️ SOLO PARA DESARROLLO - Token visible</p>
         
         <div class="camera-info">
-            <p><strong>📸 Modo cámara frontal única:</strong></p>
-            <p>• Usamos solo la cámara frontal para todos los pasos</p>
-            <p>• Selfie se muestra en espejo (más natural)</p>
-            <p>• INE se captura normalmente</p>
+            <p><strong>📸 Modo cámara trasera única:</strong></p>
+            <p>• Usamos solo la cámara trasera para todos los pasos</p>
+            <p>• Para selfie: apunta la cámara trasera hacia ti</p>
             <p>• <span id="step-indicator">Paso 1 de 4</span></p>
         </div>
         
@@ -74,7 +79,7 @@
             <div class="debug-buttons">
                 <button onclick="restartCamera()">🔄 Reiniciar Cámara</button>
                 <button onclick="testSimpleEndpoint()">🔍 Probar OCR</button>
-                <button onclick="testAllEndpoints()">🔄 Probar Todo</button>
+                <button onclick="validateCURP('XEXX010101HNEXXXA4')">📄 Probar CURP</button>
                 <button onclick="console.log('Fotos:', photos)">📊 Ver Fotos</button>
             </div>
         </div>
@@ -83,7 +88,7 @@
             <!-- Paso 1: INE Frontal -->
             <div class="step active" id="step1">
                 <h2>📄 Paso 1: INE Frontal</h2>
-                <p><small>Apunta la cámara frontal al INE</small></p>
+                <p><small>Apunta la cámara trasera al INE (frente)</small></p>
                 
                 <div class="camera-container">
                     <video id="video1" autoplay playsinline></video>
@@ -130,11 +135,17 @@
             
             <!-- Paso 3: Selfie -->
             <div class="step" id="step3">
-                <h2>😊 Paso 3: Selfie</h2>
-                <p><small>Mira a la cámara frontal y sonríe</small></p>
+                <h2>😊 Paso 3: Selfie (con cámara trasera)</h2>
+                
+                <div class="selfie-instruction">
+                    <p><strong>💡 Instrucción para selfie:</strong></p>
+                    <p>1. Voltea el teléfono (cámara trasera hacia ti)</p>
+                    <p>2. Mira a la cámara trasera (puedes usar un espejo)</p>
+                    <p>3. Toma la foto cuando estés listo</p>
+                </div>
                 
                 <div class="camera-container">
-                    <video id="video3" autoplay playsinline class="selfie-video"></video>
+                    <video id="video3" autoplay playsinline></video>
                     
                     <div class="camera-buttons">
                         <button onclick="capturePhoto(3)" class="camera-button" style="background: #28a745;">
@@ -181,9 +192,9 @@
         <div class="token-info">
             <small>🔐 Token activo: <span id="token-preview">****************</span></small>
             <br>
-            <small>📸 Cámara: <span id="camera-status">Frontal</span></small>
+            <small>📸 Cámara: <span id="camera-status">Trasera</span></small>
             <br>
-            <small>🔄 Última acción: <span id="last-action">Esperando...</span></small>
+            <small>🔄 Última acción: <span id="last-action">Iniciando...</span></small>
         </div>
     </div>
     
@@ -191,45 +202,44 @@
     <script src="app.js"></script>
     
     <script>
-        // Actualizar estado de cámara
-        function updateCameraStatus(status) {
-            const statusEl = document.getElementById('camera-status');
-            if (statusEl) statusEl.textContent = status;
+        // Función para probar endpoint simple (compatibilidad)
+        function testSimpleEndpoint() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText('TEST', 20, 50);
+            
+            const testImage = canvas.toDataURL('image/jpeg', 0.5);
+            
+            fetch('https://api.verificamex.com/identity/v1/ocr/obverse', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${VERIFICAMEX_TOKEN}`
+                },
+                body: JSON.stringify({
+                    ine_front: testImage
+                })
+            })
+            .then(response => {
+                console.log('Test status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Test response:', data);
+                alert('✅ OCR funciona! Ver consola para detalles.');
+            })
+            .catch(error => {
+                console.error('Test error:', error);
+                alert('❌ Error: ' + error.message);
+            });
         }
-        
-        // Actualizar última acción
-        function updateLastAction(action) {
-            const actionEl = document.getElementById('last-action');
-            if (actionEl) actionEl.textContent = action;
-        }
-        
-        // Sobrescribir funciones para tracking
-        const originalCapturePhoto = window.capturePhoto;
-        window.capturePhoto = function(stepNumber) {
-            const stepNames = ['', 'INE Frontal', 'INE Trasero', 'Selfie'];
-            updateLastAction(`Capturando ${stepNames[stepNumber]}`);
-            return originalCapturePhoto(stepNumber);
-        };
-        
-        const originalUseTestImage = window.useTestImage;
-        window.useTestImage = function(stepNumber) {
-            updateLastAction('Usando imagen de prueba');
-            return originalUseTestImage(stepNumber);
-        };
-        
-        const originalInitFrontCamera = window.initFrontCamera;
-        window.initFrontCamera = async function() {
-            updateLastAction('Iniciando cámara...');
-            const result = await originalInitFrontCamera();
-            if (result) {
-                updateCameraStatus('Frontal ✅');
-                updateLastAction('Cámara lista');
-            } else {
-                updateCameraStatus('Frontal ❌');
-                updateLastAction('Error en cámara');
-            }
-            return result;
-        };
         
         // Inicialización cuando cargue la página
         document.addEventListener('DOMContentLoaded', function() {
@@ -240,11 +250,28 @@
                 tokenPreview.textContent = visiblePart + '...';
             }
             
-            // Iniciar cámara frontal
-            setTimeout(() => {
-                initFrontCamera();
-            }, 500);
+            // Actualizar estado inicial
+            updateCameraStatus('Trasera');
+            updateLastAction('Iniciando...');
         });
+        
+        // Funciones de estado (llamadas desde camera.js)
+        function updateCameraStatus(status) {
+            const statusEl = document.getElementById('camera-status');
+            if (statusEl) statusEl.textContent = status;
+        }
+        
+        function updateLastAction(action) {
+            const actionEl = document.getElementById('last-action');
+            if (actionEl) actionEl.textContent = action;
+        }
+        
+        function updateStepIndicator(step) {
+            const indicator = document.getElementById('step-indicator');
+            if (indicator) {
+                indicator.textContent = `Paso ${step} de 4`;
+            }
+        }
     </script>
 </body>
 </html>
