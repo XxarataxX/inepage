@@ -9,6 +9,7 @@ let photos = {
 
 let currentStep = 1;
 let cameraStream = null;
+let currentCameraType = 'back'; // 'back' o 'front'
 
 // ============================================
 // INICIALIZACIÓN
@@ -26,17 +27,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mostrar solo el primer paso
     showStep(1);
     
-    // Iniciar cámara trasera automáticamente
-    initBackCamera();
+    // Iniciar cámara trasera automáticamente (para fotos INE)
+    initCamera('back');
 });
 
 // ============================================
-// FUNCIÓN ÚNICA PARA INICIAR CÁMARA TRASERA
+// FUNCIONES PARA INICIAR CÁMARAS
 // ============================================
 
-async function initBackCamera() {
+async function initCamera(cameraType) {
     try {
-        console.log('=== INICIANDO CÁMARA TRASERA ===');
+        console.log(`=== INICIANDO CÁMARA ${cameraType.toUpperCase()} ===`);
         
         // Detener stream anterior si existe
         if (cameraStream) {
@@ -44,23 +45,39 @@ async function initBackCamera() {
             cameraStream = null;
         }
         
-        // Configuración para cámara trasera (environment)
-        const constraints = {
-            video: {
-                facingMode: { ideal: 'environment' },
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                frameRate: { ideal: 24 }
-            },
-            audio: false
-        };
+        let constraints;
         
-        console.log('Solicitando cámara trasera con:', constraints);
+        if (cameraType === 'back') {
+            // Cámara trasera para fotos INE
+            constraints = {
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 24 }
+                },
+                audio: false
+            };
+        } else {
+            // Cámara frontal para selfie
+            constraints = {
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 24 }
+                },
+                audio: false
+            };
+        }
+        
+        console.log('Solicitando cámara con:', constraints);
         
         // Obtener stream
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        currentCameraType = cameraType;
         
-        console.log('✅ Cámara trasera obtenida correctamente');
+        console.log(`✅ Cámara ${cameraType} obtenida correctamente`);
         
         // Asignar a TODOS los videos (mismo stream para todos)
         for (let i = 1; i <= 3; i++) {
@@ -77,72 +94,68 @@ async function initBackCamera() {
             }
         }
         
-        updateCameraStatus('Trasera ✅');
-        updateLastAction('Cámara lista');
+        // Actualizar estado
+        const cameraName = cameraType === 'back' ? 'Trasera ✅' : 'Frontal ✅';
+        updateCameraStatus(cameraName);
+        updateLastAction(`Cámara ${cameraType === 'back' ? 'trasera' : 'frontal'} lista`);
         return true;
         
     } catch (error) {
-        console.error('❌ ERROR iniciando cámara trasera:', error);
+        console.error(`❌ ERROR iniciando cámara ${cameraType}:`, error);
         
-        let errorMessage = 'Error con la cámara trasera: ';
+        let errorMessage = `Error con la cámara ${cameraType}: `;
         
         if (error.name === 'NotAllowedError') {
             errorMessage = 'Permiso denegado. Por favor permite el acceso a la cámara.';
         } else if (error.name === 'NotFoundError') {
-            errorMessage = 'No se encontró cámara trasera. Intentando con frontal...';
-            // Intentar con cámara frontal como fallback
-            return await initFrontCameraAsFallback();
+            errorMessage = `No se encontró cámara ${cameraType}.`;
         } else if (error.name === 'NotReadableError') {
             errorMessage = 'La cámara está siendo usada por otra aplicación.';
         } else if (error.name === 'OverconstrainedError') {
-            errorMessage = 'Cámara trasera no disponible. Intentando con frontal...';
-            return await initFrontCameraAsFallback();
+            errorMessage = `Cámara ${cameraType} no disponible.`;
         } else {
             errorMessage += error.message;
         }
         
-        alert(errorMessage + '\n\nPuedes usar imágenes de prueba mientras solucionamos esto.');
-        updateCameraStatus('Trasera ❌');
-        updateLastAction('Error en cámara');
-        return false;
-    }
-}
-
-// Fallback: usar cámara frontal si la trasera falla
-async function initFrontCameraAsFallback() {
-    try {
-        console.log('Intentando cámara frontal como fallback...');
+        // Intentar con la otra cámara como fallback
+        const fallbackType = cameraType === 'back' ? 'front' : 'back';
+        console.log(`Intentando fallback con cámara ${fallbackType}...`);
         
-        const constraints = {
-            video: {
-                facingMode: 'user',
-                width: { ideal: 640 },
-                height: { ideal: 480 }
-            },
-            audio: false
-        };
-        
-        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-        
-        // Asignar a videos
-        for (let i = 1; i <= 3; i++) {
-            const video = document.getElementById(`video${i}`);
-            if (video) {
-                video.srcObject = cameraStream;
-                video.play();
+        try {
+            const fallbackConstraints = {
+                video: {
+                    facingMode: fallbackType === 'back' ? { ideal: 'environment' } : 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                },
+                audio: false
+            };
+            
+            cameraStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+            currentCameraType = fallbackType;
+            
+            // Asignar a videos
+            for (let i = 1; i <= 3; i++) {
+                const video = document.getElementById(`video${i}`);
+                if (video) {
+                    video.srcObject = cameraStream;
+                    video.play();
+                }
             }
+            
+            const fallbackName = fallbackType === 'back' ? 'Trasera (fallback) ✅' : 'Frontal (fallback) ✅';
+            console.log(`✅ Cámara ${fallbackType} iniciada como fallback`);
+            updateCameraStatus(fallbackName);
+            updateLastAction(`Cámara ${fallbackType} activada como fallback`);
+            return true;
+            
+        } catch (fallbackError) {
+            console.error('Error incluso con fallback:', fallbackError);
+            alert(errorMessage + '\n\nPuedes usar imágenes de prueba mientras solucionamos esto.');
+            updateCameraStatus('Sin cámara ❌');
+            updateLastAction('Error en ambas cámaras');
+            return false;
         }
-        
-        console.log('✅ Cámara frontal iniciada como fallback');
-        updateCameraStatus('Frontal (fallback) ✅');
-        updateLastAction('Cámara frontal activada');
-        return true;
-        
-    } catch (error) {
-        console.error('Error incluso con cámara frontal:', error);
-        updateCameraStatus('Sin cámara ❌');
-        updateLastAction('Error en ambas cámaras');
-        return false;
     }
 }
 
@@ -201,15 +214,26 @@ function capturePhoto(stepNumber) {
                 <p style="margin-top: 5px; font-size: 14px; color: #28a745;">
                     ✅ ${getStepName(stepNumber)} capturada
                 </p>
+                <p style="font-size: 12px; color: #666;">
+                    (Cámara ${stepNumber === 3 ? 'frontal' : 'trasera'})
+                </p>
             </div>
         `;
         
-        updateLastAction(`${getStepName(stepNumber)} capturada`);
+        updateLastAction(`${getStepName(stepNumber)} capturada con cámara ${stepNumber === 3 ? 'frontal' : 'trasera'}`);
+        
+        // Si estamos en paso 2 (INE trasero), cambiar a cámara frontal para el selfie
+        if (stepNumber === 2) {
+            console.log('Cambiando a cámara frontal para selfie...');
+            setTimeout(() => {
+                initCamera('front');
+            }, 300);
+        }
         
         // Avanzar al siguiente paso
         setTimeout(() => {
             showStep(stepNumber + 1);
-        }, 500);
+        }, 800);
         
     } catch (error) {
         console.error('Error capturando foto:', error);
@@ -251,6 +275,31 @@ function showStep(step) {
     
     // Actualizar indicador de paso
     updateStepIndicator(step);
+    
+    // Actualizar mensaje de cámara
+    updateCameraMessage(step);
+}
+
+// Actualizar mensaje sobre qué cámara se usa
+function updateCameraMessage(step) {
+    const messageDiv = document.getElementById('camera-message');
+    if (!messageDiv) return;
+    
+    if (step === 3) {
+        messageDiv.innerHTML = `
+            <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin: 10px 0;">
+                <strong>📱 Selfie con cámara frontal:</strong> 
+                <span style="color: #1976d2;">Mírate a la cámara frontal del dispositivo</span>
+            </div>
+        `;
+    } else {
+        messageDiv.innerHTML = `
+            <div style="background: #f3e5f5; padding: 8px; border-radius: 4px; margin: 10px 0;">
+                <strong>📷 Cámara trasera:</strong> 
+                <span style="color: #7b1fa2;">Apoya el INE sobre una superficie plana</span>
+            </div>
+        `;
+    }
 }
 
 // Actualizar indicador visual
@@ -265,6 +314,9 @@ function updateStepIndicator(step) {
 async function restartCamera() {
     console.log('Reiniciando cámara...');
     updateLastAction('Reiniciando cámara...');
+    
+    // Determinar qué cámara usar según el paso actual
+    const cameraType = currentStep === 3 ? 'front' : 'back';
     
     // Detener stream actual
     if (cameraStream) {
@@ -283,10 +335,10 @@ async function restartCamera() {
     // Pequeña pausa
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Reiniciar
-    const result = await initBackCamera();
+    // Reiniciar con la cámara apropiada
+    const result = await initCamera(cameraType);
     if (result) {
-        updateLastAction('Cámara reiniciada');
+        updateLastAction(`Cámara ${cameraType} reiniciada`);
     }
     return result;
 }
@@ -294,13 +346,16 @@ async function restartCamera() {
 // Función para usar imagen de prueba
 function useTestImage(stepNumber) {
     console.log(`Usando imagen de prueba para paso ${stepNumber}`);
-    updateLastAction('Usando imagen de prueba');
+    
+    // Determinar qué tipo de cámara se debería usar
+    const cameraType = stepNumber === 3 ? 'front' : 'back';
+    updateLastAction(`Usando imagen de prueba (cámara ${cameraType})`);
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
     if (stepNumber === 1 || stepNumber === 2) {
-        // INE
+        // INE con cámara trasera
         canvas.width = 400;
         canvas.height = 250;
         
@@ -319,31 +374,47 @@ function useTestImage(stepNumber) {
         ctx.fillText('Dirección: CALLE DEMO 123', 20, 160);
         
     } else if (stepNumber === 3) {
-        // Selfie con cámara trasera (persona frente a espejo)
+        // Selfie con cámara frontal
         canvas.width = 300;
         canvas.height = 300;
         
-        // Fondo
-        ctx.fillStyle = '#e0e0e0';
+        // Fondo de selfie con cámara frontal
+        ctx.fillStyle = '#4fc3f7';
         ctx.fillRect(0, 0, 300, 300);
         
-        // Persona (vista desde atrás con cámara trasera)
-        ctx.fillStyle = '#333';
+        // Cara (vista frontal)
+        ctx.fillStyle = '#ffccbc';
         ctx.beginPath();
-        ctx.arc(150, 100, 40, 0, Math.PI * 2); // Cabeza
+        ctx.arc(150, 120, 50, 0, Math.PI * 2); // Cara
         ctx.fill();
         
-        // Cuerpo
-        ctx.fillRect(130, 140, 40, 80);
+        // Ojos
+        ctx.fillStyle = '#37474f';
+        ctx.beginPath();
+        ctx.arc(130, 110, 8, 0, Math.PI * 2); // Ojo izquierdo
+        ctx.arc(170, 110, 8, 0, Math.PI * 2); // Ojo derecho
+        ctx.fill();
         
-        // Brazos
-        ctx.fillRect(100, 150, 30, 10);
-        ctx.fillRect(170, 150, 30, 10);
+        // Sonrisa
+        ctx.beginPath();
+        ctx.arc(150, 140, 20, 0, Math.PI, false); // Sonrisa
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#37474f';
+        ctx.stroke();
         
-        // Indicador de selfie con cámara trasera
-        ctx.fillStyle = '#007bff';
-        ctx.font = '12px Arial';
-        ctx.fillText('Selfie con cámara trasera', 80, 250);
+        // Indicador de selfie con cámara frontal
+        ctx.fillStyle = '#0d47a1';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText('SELFIE CON CÁMARA FRONTAL', 60, 250);
+        
+        // Icono de cámara frontal
+        ctx.fillStyle = '#ff4081';
+        ctx.beginPath();
+        ctx.arc(260, 40, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = '10px Arial';
+        ctx.fillText('📱', 255, 45);
     }
     
     const testImage = canvas.toDataURL('image/jpeg', 0.8);
@@ -370,8 +441,20 @@ function useTestImage(stepNumber) {
             <p style="margin-top: 5px; font-size: 14px; color: #17a2b8;">
                 🧪 Imagen de prueba
             </p>
+            <p style="font-size: 12px; color: #666;">
+                (Cámara ${stepNumber === 3 ? 'frontal' : 'trasera'})
+            </p>
         </div>
     `;
+    
+    // Si estamos en paso 2, simular cambio a cámara frontal para paso 3
+    if (stepNumber === 2) {
+        console.log('Simulando cambio a cámara frontal para selfie...');
+        setTimeout(() => {
+            // Cambiar mensaje de cámara
+            updateCameraMessage(3);
+        }, 300);
+    }
     
     // Avanzar
     setTimeout(() => {
@@ -383,6 +466,15 @@ function useTestImage(stepNumber) {
 function skipStep(stepNumber) {
     console.log(`Saltando paso ${stepNumber}`);
     updateLastAction(`Saltando paso ${stepNumber}`);
+    
+    // Si saltamos el paso 2, asegurarnos de cambiar a cámara frontal para el paso 3
+    if (stepNumber === 2) {
+        console.log('Cambiando a cámara frontal para selfie...');
+        setTimeout(() => {
+            initCamera('front');
+        }, 100);
+    }
+    
     showStep(stepNumber + 1);
 }
 
@@ -408,6 +500,10 @@ function resetDemo() {
     const resultDiv = document.getElementById('result');
     if (resultDiv) resultDiv.innerHTML = '';
     
+    // Limpiar mensaje de cámara
+    const messageDiv = document.getElementById('camera-message');
+    if (messageDiv) messageDiv.innerHTML = '';
+    
     // Ocultar loading
     const loadingDiv = document.getElementById('loading');
     if (loadingDiv) loadingDiv.style.display = 'none';
@@ -415,20 +511,19 @@ function resetDemo() {
     // Volver al paso 1
     showStep(1);
     
-    // Reiniciar cámara
+    // Reiniciar cámara trasera (para fotos INE)
     setTimeout(() => {
-        restartCamera();
+        initCamera('back');
     }, 300);
     
     console.log('Demo reiniciada');
-    updateLastAction('Demo reiniciada');
+    updateLastAction('Demo reiniciada con cámara trasera');
 }
 
 // ============================================
-// FUNCIONES DE ESTADO (definidas en HTML)
+// FUNCIONES DE ESTADO
 // ============================================
 
-// Estas funciones se definen en el HTML
 function updateCameraStatus(status) {
     const statusEl = document.getElementById('camera-status');
     if (statusEl) statusEl.textContent = status;
@@ -443,7 +538,7 @@ function updateLastAction(action) {
 // HACER FUNCIONES GLOBALES
 // ============================================
 
-window.initBackCamera = initBackCamera;
+window.initCamera = initCamera;
 window.restartCamera = restartCamera;
 window.useTestImage = useTestImage;
 window.skipStep = skipStep;
