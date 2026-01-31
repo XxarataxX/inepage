@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Transición de Paso - DSI</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+        }
+        .flip-animation {
+            animation: flip 0.6s ease-in-out;
+        }
+        @keyframes flip {
+            0% { transform: rotateY(0deg); }
+            50% { transform: rotateY(90deg); }
+            100% { transform: rotateY(0deg); }
+        }
+        .pulse-success {
+            animation: pulseSuccess 2s infinite;
+        }
+        @keyframes pulseSuccess {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+        }
+    </style>
+</head>
+<body class="bg-transparent">
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all border border-gray-100 dark:border-gray-800">
+            <div class="p-8 flex flex-col items-center text-center">
+                <!-- Success Icon -->
+                <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mb-6 pulse-success">
+                    <span class="material-symbols-outlined text-4xl font-bold">check_circle</span>
+                </div>
+                
+                <!-- Title -->
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">¡Captura Exitosa!</h3>
+                
+                <!-- Dynamic Message -->
+                <p id="modal-message" class="text-gray-600 dark:text-gray-400 mb-8">Procesando siguiente paso...</p>
+                
+                <!-- Step Visualization -->
+                <div class="relative w-48 h-32 mb-8 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                    <div class="flex items-center gap-4">
+                        <!-- Previous Step -->
+                        <div class="relative">
+                            <span class="material-symbols-outlined text-5xl text-gray-300">badge</span>
+                            <div class="absolute -top-1 -right-1 bg-gray-300 text-white rounded-full p-1">
+                                <span class="material-symbols-outlined text-xs">check</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Transition Arrow -->
+                        <span class="material-symbols-outlined text-primary text-3xl flip-animation">sync</span>
+                        
+                        <!-- Next Step -->
+                        <div class="relative">
+                            <span class="material-symbols-outlined text-5xl text-primary">badge</span>
+                            <div class="absolute -top-1 -right-1 bg-primary text-white rounded-full p-1">
+                                <span id="next-step-number" class="text-xs font-bold">2</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Instruction -->
+                    <div class="absolute bottom-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        <span id="next-step-text">Preparando siguiente paso</span>
+                    </div>
+                </div>
+                
+                <!-- Camera Change Notice (for step 2 to 3) -->
+                <div id="camera-change-notice" class="hidden mb-6 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-blue-500">switch_video</span>
+                        <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">Se cambiará automáticamente a cámara frontal</p>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-8 overflow-hidden">
+                    <div id="modal-progress" class="bg-primary h-full rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                </div>
+                
+                <!-- Countdown -->
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                    Continuando en <span id="countdown" class="font-bold text-primary">3</span> segundos
+                </p>
+                
+                <!-- Action Buttons -->
+                <div class="flex gap-3 w-full">
+                    <button onclick="handleContinue()" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition-colors shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                        Continuar ahora
+                    </button>
+                </div>
+                
+                <!-- Cancel Option -->
+                <button onclick="closeModal()" class="mt-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let countdown = 3;
+        let countdownInterval;
+        let nextStep = 2;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Obtener parámetros de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentStep = parseInt(urlParams.get('from') || '1');
+            nextStep = currentStep + 1;
+            
+            // Configurar modal según el paso
+            configureModal(currentStep);
+            
+            // Iniciar animaciones
+            startAnimations();
+            
+            // Iniciar cuenta regresiva
+            startCountdown();
+        });
+        
+        function configureModal(currentStep) {
+            const messages = {
+                1: {
+                    title: "¡Frente del INE Correcto!",
+                    message: "Ahora, por favor, captura la parte trasera de tu INE",
+                    nextText: "REVERSO DEL INE"
+                },
+                2: {
+                    title: "¡Reverso del INE Correcto!",
+                    message: "Ahora, captura una selfie con buena iluminación",
+                    nextText: "SELFIE",
+                    showCameraNotice: true
+                },
+                3: {
+                    title: "¡Selfie Correcta!",
+                    message: "Procesando verificación de identidad...",
+                    nextText: "RESULTADOS"
+                }
+            };
+            
+            const config = messages[currentStep] || messages[1];
+            
+            document.querySelector('h3').textContent = config.title;
+            document.getElementById('modal-message').textContent = config.message;
+            document.getElementById('next-step-number').textContent = nextStep;
+            document.getElementById('next-step-text').textContent = config.nextText;
+            
+            if (config.showCameraNotice) {
+                document.getElementById('camera-change-notice').classList.remove('hidden');
+            }
+            
+            // Animar barra de progreso
+            setTimeout(() => {
+                document.getElementById('modal-progress').style.width = '100%';
+            }, 100);
+        }
+        
+        function startAnimations() {
+            // Icono de flecha animada
+            const arrow = document.querySelector('.flip-animation');
+            setInterval(() => {
+                arrow.style.animation = 'none';
+                setTimeout(() => {
+                    arrow.style.animation = 'flip 0.6s ease-in-out';
+                }, 10);
+            }, 2000);
+        }
+        
+        function startCountdown() {
+            const countdownElement = document.getElementById('countdown');
+            countdownElement.textContent = countdown;
+            
+            countdownInterval = setInterval(() => {
+                countdown--;
+                countdownElement.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    handleContinue();
+                }
+            }, 1000);
+        }
+        
+        function handleContinue() {
+            clearInterval(countdownInterval);
+            
+            // En un entorno real, aquí se redirigiría al siguiente paso
+            // Por ahora, solo cerramos el modal
+            closeModal();
+        }
+        
+        function closeModal() {
+            // Simular cierre del modal
+            alert('Redirigiendo al siguiente paso...');
+            window.close(); // En un iframe se cerraría el modal
+        }
+        
+        // Hacer funciones globales
+        window.handleContinue = handleContinue;
+        window.closeModal = closeModal;
+    </script>
+</body>
+</html>

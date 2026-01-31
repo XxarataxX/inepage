@@ -1,209 +1,1321 @@
 <!DOCTYPE html>
-<html lang="es">
+<html class="light" lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Verificamex - Cámara Trasera</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Verificación de Identidad - DSI</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "error": "#ef4444"
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
     <style>
-        .camera-info {
-            background: #e7f3ff;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border-left: 4px solid #007bff;
-            font-size: 14px;
+        body {
+            font-family: 'Public Sans', sans-serif;
         }
-        
-        .camera-info p {
-            margin: 5px 0;
+        .scanner-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #137fec, transparent);
+            position: absolute;
+            width: 100%;
+            top: 0;
+            animation: scan 3s infinite linear;
         }
-        
-        .step-indicator {
-            background: #6c757d;
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            display: inline-block;
-            margin-bottom: 10px;
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
         }
-        
-        .camera-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 15px 0;
+        .dni-guide {
+            border: 2px solid rgba(19, 127, 236, 0.5);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
         }
-        
-        .camera-button {
-            flex: 1;
-            min-width: 140px;
+        .step-transition {
+            transition: all 0.3s ease-in-out;
         }
-        
-        .selfie-instruction {
-            background: #fff3cd;
-            color: #856404;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border: 1px solid #ffeaa7;
-            font-size: 14px;
+        .flip-card-animation {
+            perspective: 1000px;
         }
-        
-        @media (max-width: 768px) {
-            .camera-buttons {
-                flex-direction: column;
-            }
-            
-            .camera-button {
-                width: 100%;
-            }
+        .photo-preview {
+            transition: transform 0.3s ease;
         }
+        .photo-preview:hover {
+            transform: scale(1.05);
+        }
+        /* Estilos adicionales para funcionalidad JS */
+        .step-container {
+            display: none;
+        }
+        .step-container.active {
+            display: block;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #137fec;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>📱 Demo Verificamex</h1>
-        <p class="warning">⚠️ SOLO PARA DESARROLLO - Token visible</p>
-        
-        <div class="camera-info">
-            <p><strong>📸 Modo cámara trasera única:</strong></p>
-            <p>• Usamos solo la cámara trasera para todos los pasos</p>
-            <p>• Para selfie: apunta la cámara trasera hacia ti</p>
-            <p>• <span id="step-indicator">Paso 1 de 4</span></p>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display transition-colors duration-300">
+    
+    <!-- TopNavBar -->
+    <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-gray-800 bg-white dark:bg-background-dark px-4 sm:px-10 py-3 z-50">
+        <div class="flex items-center gap-4 text-gray-900 dark:text-white">
+            <div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined">shield_person</span>
+            </div>
+            <h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Verificación de Identidad - DSI</h2>
         </div>
-        
-        <div class="debug-panel">
-            <h3>🔧 Controles de Cámara</h3>
-            <div class="debug-buttons">
-                <button onclick="restartCamera()">🔄 Reiniciar Cámara</button>
-                <button onclick="testSimpleEndpoint()">🔍 Probar OCR</button>
-                <button onclick="validateCURP('XEXX010101HNEXXXA4')">📄 Probar CURP</button>
-                <button onclick="console.log('Fotos:', photos)">📊 Ver Fotos</button>
-            </div>
+        <div class="flex gap-3">
+            <button onclick="toggleHelp()" class="flex items-center justify-center rounded-lg h-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 hover:bg-gray-200 transition-colors">
+                <span class="material-symbols-outlined">help</span>
+            </button>
+            <button onclick="toggleDarkMode()" class="flex items-center justify-center rounded-lg h-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 hover:bg-gray-200 transition-colors">
+                <span class="material-symbols-outlined">dark_mode</span>
+            </button>
         </div>
-        
-        <div class="steps">
-            <!-- Paso 1: INE Frontal -->
-            <div class="step active" id="step1">
-                <h2>📄 Paso 1: INE Frontal</h2>
-                <p><small>Apunta la cámara trasera al INE (frente)</small></p>
-                
-                <div class="camera-container">
-                    <video id="video1" autoplay playsinline></video>
-                    
-                    <div class="camera-buttons">
-                        <button onclick="capturePhoto(1)" class="camera-button" style="background: #28a745;">
-                            📸 Capturar INE Frontal
-                        </button>
-                        <button onclick="useTestImage(1)" class="camera-button" style="background: #17a2b8;">
-                            🧪 Usar Imagen de Prueba
-                        </button>
-                        <button onclick="skipStep(1)" class="camera-button" style="background: #6c757d;">
-                            ⏭️ Saltar INE Frontal
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="preview" id="preview1"></div>
-            </div>
-            
-            <!-- Paso 2: INE Trasero -->
-            <div class="step" id="step2">
-                <h2>📄 Paso 2: INE Trasero (Opcional)</h2>
-                <p><small>Voltea el INE y captura la parte trasera</small></p>
-                
-                <div class="camera-container">
-                    <video id="video2" autoplay playsinline></video>
-                    
-                    <div class="camera-buttons">
-                        <button onclick="capturePhoto(2)" class="camera-button" style="background: #28a745;">
-                            📸 Capturar INE Trasero
-                        </button>
-                        <button onclick="useTestImage(2)" class="camera-button" style="background: #17a2b8;">
-                            🧪 Usar Imagen de Prueba
-                        </button>
-                        <button onclick="skipStep(2)" class="camera-button" style="background: #6c757d;">
-                            ⏭️ Saltar INE Trasero
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="preview" id="preview2"></div>
-            </div>
-            
-            <!-- Paso 3: Selfie -->
-            <div class="step" id="step3">
-                <h2>😊 Paso 3: Selfie (con cámara trasera)</h2>
-                
-                <div class="selfie-instruction">
-                    <p><strong>💡 Instrucción para selfie:</strong></p>
-                    <p>1. Voltea el teléfono (cámara trasera hacia ti)</p>
-                    <p>2. Mira a la cámara trasera (puedes usar un espejo)</p>
-                    <p>3. Toma la foto cuando estés listo</p>
-                </div>
-                
-                <div class="camera-container">
-                    <video id="video3" autoplay playsinline></video>
-                    
-                    <div class="camera-buttons">
-                        <button onclick="capturePhoto(3)" class="camera-button" style="background: #28a745;">
-                            😊 Capturar Selfie
-                        </button>
-                        <button onclick="useTestImage(3)" class="camera-button" style="background: #17a2b8;">
-                            🧪 Usar Selfie de Prueba
-                        </button>
-                        <button onclick="skipStep(3)" class="camera-button" style="background: #6c757d;">
-                            ⏭️ Saltar Selfie
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="preview" id="preview3"></div>
-            </div>
-            
-            <!-- Paso 4: Validar -->
-            <div class="step" id="step4">
-                <h2>✅ Paso 4: Validar</h2>
-                <p><small>Envía las fotos a Verificamex para validación</small></p>
-                
-                <div class="camera-buttons">
-                    <button onclick="validateIdentity()" class="validate-btn" style="background: #007bff;">
-                        🚀 Validar con Verificamex
-                    </button>
-                    <button onclick="tryComparison()" style="background: #ffc107; color: #000;">
-                        😊 Solo Comparación Facial
-                    </button>
-                    <button onclick="resetDemo()" style="background: #6c757d;">
-                        🔄 Comenzar de Nuevo
-                    </button>
-                </div>
-                
-                <div id="loading" style="display:none;">
-                    <div class="spinner"></div>
-                    <p>Procesando con Verificamex...</p>
-                </div>
-                
-                <div id="result"></div>
-            </div>
-        </div>
-        
-        <div class="token-info">
-            <small>🔐 Token activo: <span id="token-preview">****************</span></small>
-            <br>
-            <small>📸 Cámara: <span id="camera-status">Trasera</span></small>
-            <br>
-            <small>🔄 Última acción: <span id="last-action">Iniciando...</span></small>
+    </header>
+
+    <!-- Loading Overlay (Necesario para app.js) -->
+    <div id="loading" class="loading-overlay">
+        <div class="text-center">
+            <div class="loading-spinner"></div>
+            <p class="text-white mt-4 font-semibold">Procesando...</p>
         </div>
     </div>
-    
-    <script src="camera.js"></script>
-    <script src="app.js"></script>
-    
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-10 py-8">
+        <!-- Breadcrumbs -->
+        <div class="flex flex-wrap gap-2 mb-6">
+            <span class="text-gray-900 dark:text-white text-sm font-medium">Captura de Documento</span>
+            <span class="text-gray-400 text-sm">/</span>
+            <span id="step-indicator" class="text-primary text-sm font-medium">Paso 1 de 4</span>
+        </div>
+
+        <!-- Camera Message -->
+        <div id="camera-message" class="mb-6">
+            <div style="background: #f3e5f5; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #7b1fa2;">
+                <strong>📷 Cámara trasera:</strong> 
+                <span style="color: #7b1fa2;">Apoya el INE sobre una superficie plana y bien iluminada</span>
+            </div>
+        </div>
+
+        <!-- Result Container (Necesario para app.js) -->
+        <div id="result" class="result-container mb-6" style="display: none;"></div>
+
+        <!-- Steps Container -->
+        <div id="steps-container">
+            <!-- Step 1: INE Front -->
+            <div id="step1" class="step-container active step-transition">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Left Column: Camera View -->
+                    <div class="lg:col-span-8 flex flex-col gap-6">
+                        <div>
+                            <h1 class="text-gray-900 dark:text-white text-3xl font-bold leading-tight mb-2">Frente del INE</h1>
+                            <p class="text-gray-600 dark:text-gray-400 text-base">Posiciona el frente de tu INE dentro del marco. Asegúrate que toda la información sea legible.</p>
+                        </div>
+                        
+                        <!-- Camera Container -->
+                        <div class="relative">
+                            <div class="relative aspect-[16/9] bg-black rounded-xl overflow-hidden shadow-2xl border-4 border-white dark:border-gray-800">
+                                <!-- Camera Feed -->
+                                <video id="video1" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                                
+                                <!-- Overlay Guide -->
+                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div class="dni-guide w-[70%] h-[60%] rounded-xl relative flex flex-col items-center justify-center border-primary border-dashed">
+                                        <div class="scanner-line"></div>
+                                        <!-- Corners -->
+                                        <div class="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                                        <div class="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                                        <div class="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                                        <div class="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                                        <div class="flex flex-col items-center gap-2 opacity-60">
+                                            <span class="material-symbols-outlined text-white text-5xl">badge</span>
+                                            <p class="text-white text-xs font-medium uppercase tracking-widest">Alinear INE aquí</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Camera Status Badge -->
+                                <div id="camera-status" class="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 uppercase tracking-tighter">
+                                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                    En vivo
+                                </div>
+                            </div>
+                            
+                            <!-- Camera Controls -->
+                            <div class="mt-6 flex flex-wrap gap-4 justify-center">
+                                <button onclick="capturePhoto(1)" class="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg">
+                                    <span class="material-symbols-outlined">photo_camera</span>
+                                    Capturar Frente
+                                </button>
+                                <button onclick="useTestImage(1)" class="flex items-center justify-center gap-2 px-6 py-3 bg-warning text-white font-bold rounded-lg hover:bg-warning/90 transition-colors">
+                                    <span class="material-symbols-outlined">science</span>
+                                    Usar Imagen de Prueba
+                                </button>
+                                <button onclick="skipStep(1)" class="flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-lg hover:bg-gray-300 transition-colors">
+                                    <span class="material-symbols-outlined">skip_next</span>
+                                    Saltar
+                                </button>
+                            </div>
+                            
+                            <!-- Instruction Bar -->
+                            <div class="mt-4 flex items-center gap-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                                <div class="bg-primary text-white p-2 rounded-full">
+                                    <span class="material-symbols-outlined">lightbulb</span>
+                                </div>
+                                <div>
+                                    <p class="text-gray-900 dark:text-white font-semibold text-sm">Consejos para una buena captura</p>
+                                    <p class="text-gray-600 dark:text-gray-400 text-xs">Evita reflejos, asegura buena iluminación y que las cuatro esquinas sean visibles.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column: Status & Preview -->
+                    <div class="lg:col-span-4 flex flex-col gap-6">
+                        <!-- Photo Preview -->
+                        <!-- <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                            <h3 class="text-gray-900 dark:text-white font-bold text-lg mb-4">Previsualización</h3> -->
+                            <div id="preview1" class="min-h-[200px] flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+                                <!-- <div class="text-center p-4">
+                                    <span class="material-symbols-outlined text-gray-400 text-4xl mb-2">photo_camera</span>
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm">La foto capturada aparecerá aquí</p>
+                                </div> -->
+                            </div>
+                        <!-- </div> -->
+                        
+                        <!-- Status Panel -->
+                        <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-gray-900 dark:text-white font-bold text-lg">Estado del Sistema</h3>
+                                <span id="system-status" class="text-primary font-bold">Cámara activa</span>
+                            </div>
+                            
+                            <!-- Steps Checklist -->
+                            <div class="space-y-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 bg-green-100 dark:bg-green-900/30 text-green-600 p-0.5 rounded-full">
+                                        <span class="material-symbols-outlined text-sm font-bold">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Inicialización de Cámara</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Cámara trasera activa</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3 opacity-60">
+                                    <div class="mt-1 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-gray-400 text-xl">radio_button_unchecked</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Frente del INE</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Esperando captura</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3 opacity-60">
+                                    <div class="mt-1 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-gray-400 text-xl">radio_button_unchecked</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Reverso del INE</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Pendiente</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3 opacity-60">
+                                    <div class="mt-1 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-gray-400 text-xl">radio_button_unchecked</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Selfie</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Pendiente</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Camera Controls -->
+                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-300 dark:border-gray-700 flex flex-col items-center text-center">
+                            <span class="material-symbols-outlined text-gray-400 mb-2">settings</span>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">¿Problemas con la cámara?</p>
+                            <button onclick="restartCamera()" class="flex items-center gap-2 text-primary font-bold text-sm hover:underline">
+                                <span class="material-symbols-outlined text-sm">refresh</span>
+                                Reiniciar Cámara
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: INE Back -->
+            <div id="step2" class="step-container step-transition">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Left Column: Camera View -->
+                    <div class="lg:col-span-8 flex flex-col gap-6">
+                        <div>
+                            <h1 class="text-gray-900 dark:text-white text-3xl font-bold leading-tight mb-2">Reverso del INE</h1>
+                            <p class="text-gray-600 dark:text-gray-400 text-base">Ahora captura el reverso de tu INE. Asegúrate que el código de barras sea visible.</p>
+                        </div>
+                        
+                        <!-- Camera Container -->
+                        <div class="relative">
+                            <div class="relative aspect-[16/9] bg-black rounded-xl overflow-hidden shadow-2xl border-4 border-white dark:border-gray-800">
+                                <!-- Camera Feed -->
+                                <video id="video2" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                                
+                                <!-- Overlay Guide -->
+                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div class="dni-guide w-[70%] h-[60%] rounded-xl relative flex flex-col items-center justify-center border-primary border-dashed">
+                                        <div class="scanner-line"></div>
+                                        <!-- Corners -->
+                                        <div class="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                                        <div class="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                                        <div class="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                                        <div class="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                                        <div class="flex flex-col items-center gap-2 opacity-60">
+                                            <span class="material-symbols-outlined text-white text-5xl">qr_code_scanner</span>
+                                            <p class="text-white text-xs font-medium uppercase tracking-widest">Alinear reverso aquí</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Camera Status Badge -->
+                                <div class="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 uppercase tracking-tighter">
+                                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                    En vivo
+                                </div>
+                            </div>
+                            
+                            <!-- Camera Controls -->
+                            <div class="mt-6 flex flex-wrap gap-4 justify-center">
+                                <button onclick="capturePhoto(2)" class="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg">
+                                    <span class="material-symbols-outlined">photo_camera</span>
+                                    Capturar Reverso
+                                </button>
+                                <button onclick="useTestImage(2)" class="flex items-center justify-center gap-2 px-6 py-3 bg-warning text-white font-bold rounded-lg hover:bg-warning/90 transition-colors">
+                                    <span class="material-symbols-outlined">science</span>
+                                    Usar Imagen de Prueba
+                                </button>
+                                <button onclick="skipStep(2)" class="flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-lg hover:bg-gray-300 transition-colors">
+                                    <span class="material-symbols-outlined">skip_next</span>
+                                    Saltar
+                                </button>
+                            </div>
+                            
+                            <!-- Instruction Bar -->
+                            <div class="mt-4 flex items-center gap-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                                <div class="bg-primary text-white p-2 rounded-full">
+                                    <span class="material-symbols-outlined">lightbulb</span>
+                                </div>
+                                <div>
+                                    <p class="text-gray-900 dark:text-white font-semibold text-sm">Código de barras visible</p>
+                                    <p class="text-gray-600 dark:text-gray-400 text-xs">Asegúrate que el código de barras esté nítido y sin reflejos.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column: Status & Preview -->
+                    <div class="lg:col-span-4 flex flex-col gap-6">
+                        <!-- Photo Preview -->
+                        <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                            <h3 class="text-gray-900 dark:text-white font-bold text-lg mb-4">Previsualización</h3>
+                            <div id="preview2" class="min-h-[200px] flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+                                <div class="text-center p-4">
+                                    <span class="material-symbols-outlined text-gray-400 text-4xl mb-2">photo_camera</span>
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm">La foto capturada aparecerá aquí</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status Panel -->
+                        <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-gray-900 dark:text-white font-bold text-lg">Progreso</h3>
+                                <span class="text-primary font-bold">1 de 3 fotos</span>
+                            </div>
+                            
+                            <!-- Steps Checklist -->
+                            <div class="space-y-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 bg-green-100 dark:bg-green-900/30 text-green-600 p-0.5 rounded-full">
+                                        <span class="material-symbols-outlined text-sm font-bold">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Frente del INE</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Capturado correctamente</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-primary text-xl">radio_button_checked</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Reverso del INE</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Listo para capturar</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3 opacity-60">
+                                    <div class="mt-1 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-gray-400 text-xl">radio_button_unchecked</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Selfie</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Pendiente</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Validation Buttons -->
+                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-300 dark:border-gray-700 flex flex-col items-center text-center">
+                            <span class="material-symbols-outlined text-primary mb-2">verified</span>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">¿Ya capturaste todas las fotos?</p>
+                            <button onclick="startValidation()" class="flex items-center gap-2 bg-success text-white font-bold px-4 py-2 rounded-lg hover:bg-success/90 transition-colors">
+                                <span class="material-symbols-outlined text-sm">play_arrow</span>
+                                Iniciar Validación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Selfie -->
+            <div id="step3" class="step-container step-transition">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Left Column: Camera View -->
+                    <div class="lg:col-span-8 flex flex-col gap-6">
+                        <div>
+                            <h1 class="text-gray-900 dark:text-white text-3xl font-bold leading-tight mb-2">Selfie</h1>
+                            <p class="text-gray-600 dark:text-gray-400 text-base">Mírate a la cámara frontal. Asegúrate de tener buena iluminación y que tu rostro sea completamente visible.</p>
+                        </div>
+                        
+                        <!-- Camera Container -->
+                        <div class="relative">
+                            <div class="relative aspect-[16/9] bg-black rounded-xl overflow-hidden shadow-2xl border-4 border-white dark:border-gray-800">
+                                <!-- Camera Feed -->
+                                <video id="video3" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                                
+                                <!-- Overlay Guide -->
+                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div class="dni-guide w-[50%] h-[70%] rounded-full relative flex flex-col items-center justify-center border-primary border-dashed">
+                                        <!-- Face Guide -->
+                                        <div class="absolute w-[80%] h-[80%] border-2 border-white/50 rounded-full"></div>
+                                        <div class="flex flex-col items-center gap-2 opacity-60">
+                                            <span class="material-symbols-outlined text-white text-5xl">face</span>
+                                            <p class="text-white text-xs font-medium uppercase tracking-widest">Alinear rostro aquí</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Camera Status Badge -->
+                                <div class="absolute top-4 left-4 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 uppercase tracking-tighter">
+                                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                                    Cámara frontal
+                                </div>
+                            </div>
+                            
+                            <!-- Camera Controls -->
+                            <div class="mt-6 flex flex-wrap gap-4 justify-center">
+                                <button onclick="capturePhoto(3)" class="flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg">
+                                    <span class="material-symbols-outlined">photo_camera</span>
+                                    Capturar Selfie
+                                </button>
+                                <button onclick="useTestImage(3)" class="flex items-center justify-center gap-2 px-6 py-3 bg-warning text-white font-bold rounded-lg hover:bg-warning/90 transition-colors">
+                                    <span class="material-symbols-outlined">science</span>
+                                    Usar Imagen de Prueba
+                                </button>
+                                <button onclick="skipStep(3)" class="flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-lg hover:bg-gray-300 transition-colors">
+                                    <span class="material-symbols-outlined">skip_next</span>
+                                    Saltar
+                                </button>
+                            </div>
+                            
+                            <!-- Instruction Bar -->
+                            <div class="mt-4 flex items-center gap-4 bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-100 dark:border-green-800">
+                                <div class="bg-success text-white p-2 rounded-full">
+                                    <span class="material-symbols-outlined">face</span>
+                                </div>
+                                <div>
+                                    <p class="text-gray-900 dark:text-white font-semibold text-sm">Consejos para selfie</p>
+                                    <p class="text-gray-600 dark:text-gray-400 text-xs">Mira directamente a la cámara, sin lentes oscuros y con el rostro completamente visible.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column: Status & Preview -->
+                    <div class="lg:col-span-4 flex flex-col gap-6">
+                        <!-- Photo Preview -->
+                        <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                            <h3 class="text-gray-900 dark:text-white font-bold text-lg mb-4">Previsualización</h3>
+                            <div id="preview3" class="min-h-[200px] flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+                                <div class="text-center p-4">
+                                    <span class="material-symbols-outlined text-gray-400 text-4xl mb-2">photo_camera</span>
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm">La selfie aparecerá aquí</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status Panel -->
+                        <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-gray-900 dark:text-white font-bold text-lg">Completado</h3>
+                                <span class="text-success font-bold">2 de 3 fotos</span>
+                            </div>
+                            
+                            <!-- Steps Checklist -->
+                            <div class="space-y-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 bg-green-100 dark:bg-green-900/30 text-green-600 p-0.5 rounded-full">
+                                        <span class="material-symbols-outlined text-sm font-bold">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Frente del INE</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Capturado correctamente</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 bg-green-100 dark:bg-green-900/30 text-green-600 p-0.5 rounded-full">
+                                        <span class="material-symbols-outlined text-sm font-bold">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Reverso del INE</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Capturado correctamente</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-1 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-primary text-xl">radio_button_checked</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-900 dark:text-white font-medium text-sm">Selfie</p>
+                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Listo para capturar</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Validation Buttons -->
+                        <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-100 dark:border-green-800 flex flex-col items-center text-center">
+                            <span class="material-symbols-outlined text-success mb-2">verified_user</span>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">¡Ya casi terminamos!</p>
+                            <div class="flex flex-col gap-3 w-full">
+                                <button onclick="startComparison()" class="flex items-center justify-center gap-2 bg-primary text-white font-bold px-4 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-lg">
+                                    <span class="material-symbols-outlined text-sm">compare_arrows</span>
+                                    Comparación Facial
+                                </button>
+                                <button onclick="validateIdentity()" class="flex items-center justify-center gap-2 bg-success text-white font-bold px-4 py-3 rounded-lg hover:bg-success/90 transition-colors">
+                                    <span class="material-symbols-outlined text-sm">task_alt</span>
+                                    Validación Completa
+                                </button>
+                                <button onclick="testSimpleEndpoint()" class="flex items-center justify-center gap-2 bg-warning text-white font-bold px-4 py-3 rounded-lg hover:bg-warning/90 transition-colors">
+                                    <span class="material-symbols-outlined text-sm">bug_report</span>
+                                    Probar Endpoint
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Processing -->
+            <div id="step4" class="step-container step-transition">
+                <div class="text-center py-12">
+                    <div class="inline-block mb-8">
+                        <div class="relative">
+                            <div class="w-32 h-32 border-8 border-gray-200 dark:border-gray-700 rounded-full"></div>
+                            <div class="absolute top-0 left-0 w-32 h-32 border-8 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <span class="material-symbols-outlined text-primary text-4xl">fingerprint</span>
+                            </div>
+                        </div>
+                    </div>
+                    <h1 class="text-gray-900 dark:text-white text-3xl font-bold leading-tight mb-4">Procesando Verificación</h1>
+                    <p class="text-gray-600 dark:text-gray-400 text-lg mb-8 max-w-2xl mx-auto">Estamos validando tu identidad mediante nuestro sistema seguro. Esto puede tomar unos segundos.</p>
+                    
+                    <!-- Processing Steps -->
+                    <div class="max-w-md mx-auto space-y-4 mb-12">
+                        <div class="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                            <div class="bg-blue-100 dark:bg-blue-900/30 text-primary p-2 rounded-lg">
+                                <span class="material-symbols-outlined">text_rotation_none</span>
+                            </div>
+                            <div class="flex-1 text-left">
+                                <p class="text-gray-900 dark:text-white font-medium">OCR de Documento</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">Extrayendo información del INE...</p>
+                            </div>
+                            <div class="loader-small"></div>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                            <div class="bg-blue-100 dark:bg-blue-900/30 text-primary p-2 rounded-lg">
+                                <span class="material-symbols-outlined">face</span>
+                            </div>
+                            <div class="flex-1 text-left">
+                                <p class="text-gray-900 dark:text-white font-medium">Comparación Facial</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">Analizando similitudes...</p>
+                            </div>
+                            <div class="loader-small"></div>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                            <div class="bg-blue-100 dark:bg-blue-900/30 text-primary p-2 rounded-lg">
+                                <span class="material-symbols-outlined">verified</span>
+                            </div>
+                            <div class="flex-1 text-left">
+                                <p class="text-gray-900 dark:text-white font-medium">Validación Final</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">Verificando autenticidad...</p>
+                            </div>
+                            <div class="loader-small"></div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Por favor, no cierres esta ventana.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debug Panel -->
+        <div class="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">Panel de Control</h4>
+                <button onclick="resetDemo()" class="text-xs bg-error text-white px-3 py-1 rounded hover:bg-error/90 transition-colors">
+                    Reiniciar Demo
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div class="p-2 bg-white dark:bg-gray-900 rounded">
+                    <span class="font-bold">Última acción:</span>
+                    <span id="last-action" class="ml-2 text-green-600 dark:text-green-400">Esperando inicio</span>
+                </div>
+                <div class="p-2 bg-white dark:bg-gray-900 rounded">
+                    <span class="font-bold">Cámara:</span>
+                    <span id="camera-info" class="ml-2">Trasera activa</span>
+                </div>
+                <div class="p-2 bg-white dark:bg-gray-900 rounded">
+                    <span class="font-bold">Fotos capturadas:</span>
+                    <span id="photos-count" class="ml-2">0/3</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-10 flex flex-col md:flex-row justify-between items-center gap-4 text-gray-500 dark:text-gray-400 text-sm">
+            <div class="flex items-center gap-4">
+                <a class="hover:text-primary transition-colors" href="#">Política de Privacidad</a>
+                <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+                <a class="hover:text-primary transition-colors" href="#">Términos de Servicio</a>
+                <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
+                <a class="hover:text-primary transition-colors" href="#">Soporte</a>
+            </div>
+            <p>© 2024 <span class="font-bold">DSI</span> - Digital Security Innovations. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Incluir los scripts originales -->
     <script>
-        // Función para probar endpoint simple (compatibilidad)
+        // ============================================
+        // CONFIGURACIÓN GLOBAL
+        // ============================================
+        const VERIFICAMEX_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiNzc4M2ZkYzRkMGY4MDFhNjFhNjQwZjhiMzdiMjc5MTY3NDMxMTQ3NzZiY2M3ZmQyNThiMDJhNmI2MjYwY2Q5ODIwNzcwZTgyYmYxYzY0MTEiLCJpYXQiOjE3Njk3OTYxNzguMDg3OTA3LCJuYmYiOjE3Njk3OTYxNzguMDg3OTMxLCJleHAiOjE4MDEzMzIxNzguMDUxNDc5LCJzdWIiOiI5MTEzIiwic2NvcGVzIjpbXX0.k6Bwb4JlPLI2PVm9Uv27MfWhD-goR962rK51CZYwOvUhPthlnPUy4pBQaOvdKzG4TzzHgqkBci8lcvKk2yBWGzD3ipAIxnsF-yApCezgTiy9BvG7rh6QOtwju4s0muURLiynxUc9enyoyT71bAslnIAquBcYVJFVOhr6iGdyEg_GQ53AlMkHjwazv5itgT0VOAheGErgtrJsNuAqt-BfWQrPxzWVyUzYPXJCCN4tOThWexazU8j6yFvYQB6Jjn507b4iMbyZxUwB4-6DOEdNQikCuxYTK6omIo-noCgZ-LQGNm39GgaJXKtZm-p1v8Nbsnd8yU3pgDIdNwvsxnynuF_AE4glKFJZdezUXZ9qdUw_fZCUK50G-BIYrhCWksZ6ibppWtopD4oG4ghGPXT12CP1m1mg8COfvVU72YPXTa6SfGCJ9IWsnkPTZli2eb4ilxXAv9IIoPgtGbVNFokjiZsgdbELxjevhc7JIRc3hSC8apbd4lKgvBp8D_PiXdUX5-rOEVrlP7e5Av4dBaXJVMjOYgOOdzCDxN_y5HOG2KxmowCMSkXq7yusNv_ZfQKZRAAquVDLCZ9fKbMD9EqRgqj3AXf1sLSteYhWs4UbNQwhIC06PXL2LDTcHyvf7HBNeWiXlwiXCgQpfWgJUE58_-lhyNlrfZs-PPqkg4b0xdA";
+
+        let photos = {
+            ine_front: null,
+            ine_back: null,
+            selfie: null
+        };
+
+        let currentStep = 1;
+        let cameraStream = null;
+        let currentCameraType = 'back';
+        
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar solo el primer paso
+            showStep(1);
+            
+            // Iniciar cámara trasera automáticamente
+            initCamera('back');
+            
+            // Actualizar contador de fotos
+            updatePhotosCount();
+        });
+        
+        // ============================================
+        // FUNCIONES DE CÁMARA (camera.js)
+        // ============================================
+        
+        async function initCamera(cameraType) {
+            try {
+                console.log(`=== INICIANDO CÁMARA ${cameraType.toUpperCase()} ===`);
+                
+                // Detener stream anterior si existe
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                }
+                
+                let constraints;
+                
+                if (cameraType === 'back') {
+                    // Cámara trasera para fotos INE
+                    constraints = {
+                        video: {
+                            facingMode: { ideal: 'environment' },
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            frameRate: { ideal: 24 }
+                        },
+                        audio: false
+                    };
+                } else {
+                    // Cámara frontal para selfie
+                    constraints = {
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            frameRate: { ideal: 24 }
+                        },
+                        audio: false
+                    };
+                }
+                
+                console.log('Solicitando cámara con:', constraints);
+                
+                // Obtener stream
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentCameraType = cameraType;
+                
+                console.log(`✅ Cámara ${cameraType} obtenida correctamente`);
+                
+                // Asignar a TODOS los videos (mismo stream para todos)
+                for (let i = 1; i <= 3; i++) {
+                    const video = document.getElementById(`video${i}`);
+                    if (video) {
+                        video.srcObject = cameraStream;
+                        
+                        // Forzar reproducción
+                        video.play().catch(e => {
+                            console.log(`Video ${i} play error:`, e);
+                            video.muted = true;
+                            video.play();
+                        });
+                    }
+                }
+                
+                // Actualizar estado
+                const cameraName = cameraType === 'back' ? 'Trasera ✅' : 'Frontal ✅';
+                updateCameraStatus(cameraName);
+                updateLastAction(`Cámara ${cameraType === 'back' ? 'trasera' : 'frontal'} lista`);
+                return true;
+                
+            } catch (error) {
+                console.error(`❌ ERROR iniciando cámara ${cameraType}:`, error);
+                
+                let errorMessage = `Error con la cámara ${cameraType}: `;
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'Permiso denegado. Por favor permite el acceso a la cámara.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = `No se encontró cámara ${cameraType}.`;
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage = 'La cámara está siendo usada por otra aplicación.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage = `Cámara ${cameraType} no disponible.`;
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                // Intentar con la otra cámara como fallback
+                const fallbackType = cameraType === 'back' ? 'front' : 'back';
+                console.log(`Intentando fallback con cámara ${fallbackType}...`);
+                
+                try {
+                    const fallbackConstraints = {
+                        video: {
+                            facingMode: fallbackType === 'back' ? { ideal: 'environment' } : 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        },
+                        audio: false
+                    };
+                    
+                    cameraStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                    currentCameraType = fallbackType;
+                    
+                    // Asignar a videos
+                    for (let i = 1; i <= 3; i++) {
+                        const video = document.getElementById(`video${i}`);
+                        if (video) {
+                            video.srcObject = cameraStream;
+                            video.play();
+                        }
+                    }
+                    
+                    const fallbackName = fallbackType === 'back' ? 'Trasera (fallback) ✅' : 'Frontal (fallback) ✅';
+                    console.log(`✅ Cámara ${fallbackType} iniciada como fallback`);
+                    updateCameraStatus(fallbackName);
+                    updateLastAction(`Cámara ${fallbackType} activada como fallback`);
+                    return true;
+                    
+                } catch (fallbackError) {
+                    console.error('Error incluso con fallback:', fallbackError);
+                    alert(errorMessage + '\n\nPuedes usar imágenes de prueba mientras solucionamos esto.');
+                    updateCameraStatus('Sin cámara ❌');
+                    updateLastAction('Error en ambas cámaras');
+                    return false;
+                }
+            }
+        }
+        
+        function capturePhoto(stepNumber) {
+            try {
+                console.log(`Capturando foto para paso ${stepNumber}`);
+                
+                const video = document.getElementById(`video${stepNumber}`);
+                
+                if (!video || !cameraStream) {
+                    alert('La cámara no está lista. Intenta de nuevo.');
+                    return;
+                }
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                
+                // Tamaño fijo para consistencia
+                const width = 640;
+                const height = 480;
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Dibujar video en canvas
+                context.drawImage(video, 0, 0, width, height);
+                
+                // Convertir a data URL
+                const imageData = canvas.toDataURL('image/jpeg', 0.7);
+                
+                console.log(`Foto ${stepNumber} capturada:`, imageData.length, 'caracteres');
+                
+                // Guardar
+                switch(stepNumber) {
+                    case 1:
+                        photos.ine_front = imageData;
+                        break;
+                    case 2:
+                        photos.ine_back = imageData;
+                        break;
+                    case 3:
+                        photos.selfie = imageData;
+                        break;
+                }
+                
+                // Mostrar preview
+                const preview = document.getElementById(`preview${stepNumber}`);
+                preview.innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="${imageData}" alt="Foto ${stepNumber}" 
+                             style="max-width: 200px; border-radius: 8px; border: 2px solid #28a745;">
+                        <p style="margin-top: 5px; font-size: 14px; color: #28a745;">
+                            ✅ ${getStepName(stepNumber)} capturada
+                        </p>
+                        <p style="font-size: 12px; color: #666;">
+                            (Cámara ${stepNumber === 3 ? 'frontal' : 'trasera'})
+                        </p>
+                    </div>
+                `;
+                
+                updateLastAction(`${getStepName(stepNumber)} capturada con cámara ${stepNumber === 3 ? 'frontal' : 'trasera'}`);
+                
+                // Si estamos en paso 2 (INE trasero), cambiar a cámara frontal para el selfie
+                if (stepNumber === 2) {
+                    console.log('Cambiando a cámara frontal para selfie...');
+                    setTimeout(() => {
+                        initCamera('front');
+                    }, 300);
+                }
+                
+                // Actualizar contador
+                updatePhotosCount();
+                
+                // Mostrar paso de procesamiento temporal
+                if (stepNumber < 3) {
+                    showStep(stepNumber + 1);
+                } else {
+                    // Si es el último paso, mostrar opciones de validación
+                    showStep(4); // Mostrar paso de procesamiento
+                    setTimeout(() => {
+                        showStep(3); // Volver al paso 3 para mostrar botones de validación
+                    }, 1500);
+                }
+                
+            } catch (error) {
+                console.error('Error capturando foto:', error);
+                alert('Error al capturar la foto: ' + error.message);
+                updateLastAction('Error capturando foto');
+            }
+        }
+        
+        function restartCamera() {
+            console.log('Reiniciando cámara...');
+            updateLastAction('Reiniciando cámara...');
+            
+            // Determinar qué cámara usar según el paso actual
+            const cameraType = currentStep === 3 ? 'front' : 'back';
+            
+            // Detener stream actual
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            // Limpiar videos
+            for (let i = 1; i <= 3; i++) {
+                const video = document.getElementById(`video${i}`);
+                if (video) {
+                    video.srcObject = null;
+                }
+            }
+            
+            // Pequeña pausa
+            setTimeout(async () => {
+                // Reiniciar con la cámara apropiada
+                const result = await initCamera(cameraType);
+                if (result) {
+                    updateLastAction(`Cámara ${cameraType} reiniciada`);
+                }
+            }, 300);
+        }
+        
+        function useTestImage(stepNumber) {
+            console.log(`Usando imagen de prueba para paso ${stepNumber}`);
+            
+            // Determinar qué tipo de cámara se debería usar
+            const cameraType = stepNumber === 3 ? 'front' : 'back';
+            updateLastAction(`Usando imagen de prueba (cámara ${cameraType})`);
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (stepNumber === 1 || stepNumber === 2) {
+                // INE con cámara trasera
+                canvas.width = 400;
+                canvas.height = 250;
+                
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(0, 0, 400, 250);
+                ctx.fillStyle = '#0066cc';
+                ctx.fillRect(0, 0, 400, 60);
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText('INE DE PRUEBA', 20, 35);
+                
+                ctx.fillStyle = 'black';
+                ctx.font = '14px Arial';
+                ctx.fillText('Nombre: PRUEBA DEMO', 20, 100);
+                ctx.fillText('CURP: DEMO010101HDEMOO01', 20, 130);
+                ctx.fillText('Dirección: CALLE DEMO 123', 20, 160);
+                
+            } else if (stepNumber === 3) {
+                // Selfie con cámara frontal
+                canvas.width = 300;
+                canvas.height = 300;
+                
+                // Fondo de selfie con cámara frontal
+                ctx.fillStyle = '#4fc3f7';
+                ctx.fillRect(0, 0, 300, 300);
+                
+                // Cara (vista frontal)
+                ctx.fillStyle = '#ffccbc';
+                ctx.beginPath();
+                ctx.arc(150, 120, 50, 0, Math.PI * 2); // Cara
+                ctx.fill();
+                
+                // Ojos
+                ctx.fillStyle = '#37474f';
+                ctx.beginPath();
+                ctx.arc(130, 110, 8, 0, Math.PI * 2); // Ojo izquierdo
+                ctx.arc(170, 110, 8, 0, Math.PI * 2); // Ojo derecho
+                ctx.fill();
+                
+                // Sonrisa
+                ctx.beginPath();
+                ctx.arc(150, 140, 20, 0, Math.PI, false); // Sonrisa
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#37474f';
+                ctx.stroke();
+                
+                // Indicador de selfie con cámara frontal
+                ctx.fillStyle = '#0d47a1';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText('SELFIE CON CÁMARA FRONTAL', 60, 250);
+                
+                // Icono de cámara frontal
+                ctx.fillStyle = '#ff4081';
+                ctx.beginPath();
+                ctx.arc(260, 40, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.fillText('📱', 255, 45);
+            }
+            
+            const testImage = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Guardar
+            switch(stepNumber) {
+                case 1:
+                    photos.ine_front = testImage;
+                    break;
+                case 2:
+                    photos.ine_back = testImage;
+                    break;
+                case 3:
+                    photos.selfie = testImage;
+                    break;
+            }
+            
+            // Mostrar preview
+            const preview = document.getElementById(`preview${stepNumber}`);
+            preview.innerHTML = `
+                <div style="text-align: center;">
+                    <img src="${testImage}" alt="Prueba ${stepNumber}" 
+                         style="max-width: 200px; border-radius: 8px;">
+                    <p style="margin-top: 5px; font-size: 14px; color: #17a2b8;">
+                        🧪 Imagen de prueba
+                    </p>
+                    <p style="font-size: 12px; color: #666;">
+                        (Cámara ${stepNumber === 3 ? 'frontal' : 'trasera'})
+                    </p>
+                </div>
+            `;
+            
+            // Si estamos en paso 2, simular cambio a cámara frontal para paso 3
+            if (stepNumber === 2) {
+                console.log('Simulando cambio a cámara frontal para selfie...');
+                setTimeout(() => {
+                    initCamera('front');
+                }, 300);
+            }
+            
+            // Actualizar contador
+            updatePhotosCount();
+            
+            // Avanzar
+            setTimeout(() => {
+                showStep(stepNumber + 1);
+            }, 500);
+        }
+        
+        function skipStep(stepNumber) {
+            console.log(`Saltando paso ${stepNumber}`);
+            updateLastAction(`Saltando paso ${stepNumber}`);
+            
+            // Si saltamos el paso 2, asegurarnos de cambiar a cámara frontal para el paso 3
+            if (stepNumber === 2) {
+                console.log('Cambiando a cámara frontal para selfie...');
+                setTimeout(() => {
+                    initCamera('front');
+                }, 100);
+            }
+            
+            showStep(stepNumber + 1);
+        }
+        
+        // ============================================
+        // FUNCIONES DE VALIDACIÓN (app.js)
+        // ============================================
+        
+        async function validateIdentity() {
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (!photos.ine_front) {
+                alert('Necesitas al menos la foto frontal del INE');
+                return;
+            }
+            
+            resultDiv.innerHTML = '';
+            loadingDiv.style.display = 'flex';
+            
+            try {
+                const ocrResult = await validateOCR();
+                loadingDiv.style.display = 'none';
+                displayResults(ocrResult);
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Error en validación</h3>
+                        <p>${error.message}</p>
+                        <p><button onclick="testSimpleEndpoint()" style="background: #6c757d; margin-top: 10px;">
+                            🔍 Probar Endpoint Simple
+                        </button></p>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+                console.error('Error completo:', error);
+            }
+        }
+        
+        async function validateOCR() {
+            console.log('=== VALIDACIÓN OCR FRONTAL ===');
+            
+            if (!photos.ine_front) {
+                throw new Error('No hay foto del INE frontal');
+            }
+            
+            // Verificar formato
+            console.log('Formato de imagen:', photos.ine_front.substring(0, 50));
+            
+            if (!photos.ine_front.startsWith('data:image/')) {
+                console.warn('Formato incorrecto, convirtiendo a data URL...');
+                photos.ine_front = 'data:image/jpeg;base64,' + photos.ine_front;
+            }
+            
+            // Limitar tamaño si es muy grande
+            const maxSize = 200000; // ~200KB
+            let imageData = photos.ine_front;
+            
+            if (imageData.length > maxSize) {
+                console.log('Imagen demasiado grande, recortando...');
+                const prefix = imageData.substring(0, imageData.indexOf(',') + 1);
+                const base64 = imageData.substring(imageData.indexOf(',') + 1);
+                const limitedBase64 = base64.substring(0, maxSize - prefix.length);
+                imageData = prefix + limitedBase64;
+            }
+            
+            console.log('Enviando OCR...');
+            console.log('Tamaño total:', imageData.length, 'caracteres');
+            
+            const response = await fetch('https://api.verificamex.com/identity/v1/ocr/obverse', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${VERIFICAMEX_TOKEN}`
+                },
+                body: JSON.stringify({
+                    ine_front: imageData
+                })
+            });
+            
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                
+                if (errorText.includes('parametro') || errorText.includes('estructura')) {
+                    console.log('Probable error de formato, mostrando ejemplo...');
+                    showFormatExample();
+                }
+                
+                throw new Error(`Error ${response.status}: ${errorText.substring(0, 200)}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ OCR exitoso');
+            return data;
+        }
+        
+        async function tryComparison() {
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (!photos.ine_front || !photos.selfie) {
+                alert('Necesitas INE frontal y selfie para comparación facial');
+                return;
+            }
+            
+            resultDiv.innerHTML = '';
+            loadingDiv.style.display = 'flex';
+            
+            try {
+                console.log('=== INICIANDO COMPARACIÓN FACIAL ===');
+                
+                let ineFront = photos.ine_front;
+                let selfie = photos.selfie;
+                
+                // Asegurar formato correcto
+                if (!ineFront.startsWith('data:image/')) {
+                    ineFront = 'data:image/jpeg;base64,' + ineFront;
+                }
+                if (!selfie.startsWith('data:image/')) {
+                    selfie = 'data:image/jpeg;base64,' + selfie;
+                }
+                
+                // Limitar tamaño
+                const maxSize = 100000;
+                if (ineFront.length > maxSize) {
+                    const prefix = ineFront.substring(0, ineFront.indexOf(',') + 1);
+                    const base64 = ineFront.substring(ineFront.indexOf(',') + 1);
+                    ineFront = prefix + base64.substring(0, maxSize - prefix.length);
+                }
+                if (selfie.length > maxSize) {
+                    const prefix = selfie.substring(0, selfie.indexOf(',') + 1);
+                    const base64 = selfie.substring(selfie.indexOf(',') + 1);
+                    selfie = prefix + base64.substring(0, maxSize - prefix.length);
+                }
+                
+                console.log('Enviando comparación facial...');
+                
+                const response = await fetch('https://api.verificamex.com/identity/v1/validations/compare_face', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${VERIFICAMEX_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        ine_front: ineFront,
+                        selfie: selfie
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    
+                    if (response.status === 500) {
+                        throw new Error('El servidor de comparación facial no está respondiendo (error 500). Esto puede ser temporal.');
+                    }
+                    
+                    throw new Error(`Error ${response.status}: ${errorText.substring(0, 200)}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Comparación facial exitosa:', data);
+                
+                loadingDiv.style.display = 'none';
+                displayResults(data);
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Error en comparación facial</h3>
+                        <p>${error.message}</p>
+                        <p><strong>Posibles causas:</strong></p>
+                        <ul>
+                            <li>El endpoint /compare_face puede tener problemas temporales</li>
+                            <li>Imágenes demasiado grandes o en formato incorrecto</li>
+                            <li>Problemas de red o conexión</li>
+                        </ul>
+                        <p><strong>Alternativas:</strong></p>
+                        <div style="margin-top: 15px;">
+                            <button onclick="validateIdentity()" style="background: #28a745; margin: 5px;">
+                                🚀 Intentar validación OCR
+                            </button>
+                            <button onclick="testSimpleEndpoint()" style="background: #17a2b8; margin: 5px;">
+                                🔍 Probar endpoint simple
+                            </button>
+                        </div>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+                console.error('Error completo en comparación facial:', error);
+            }
+        }
+        
+        async function startComparison() {
+            await tryComparison();
+        }
+        
+        async function startValidation() {
+    const loadingDiv = document.getElementById('loading');
+    const resultDiv = document.getElementById('result');
+    
+    showStep(4); // Mostrar pantalla de procesamiento
+    
+    try {
+        loadingDiv.style.display = 'flex';
+        const result = await validateIdentity();
+        loadingDiv.style.display = 'none';
+        
+        // displayResults() ahora se encargará de redirigir
+        displayResults(result);
+        
+    } catch (error) {
+        loadingDiv.style.display = 'none';
+        showStep(3); // Volver al paso 3 si hay error
+        
+        resultDiv.innerHTML = `
+            <div class="error">
+                <h3>❌ Error en validación</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    }
+}
+        
         function testSimpleEndpoint() {
+            console.log('=== TEST CON FORMATO CORRECTO ===');
+            
             const canvas = document.createElement('canvas');
             canvas.width = 100;
             canvas.height = 100;
@@ -241,21 +1353,176 @@
             });
         }
         
-        // Inicialización cuando cargue la página
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mostrar token parcial
-            const tokenPreview = document.getElementById('token-preview');
-            if (typeof VERIFICAMEX_TOKEN !== 'undefined' && VERIFICAMEX_TOKEN) {
-                const visiblePart = VERIFICAMEX_TOKEN.substring(0, 10);
-                tokenPreview.textContent = visiblePart + '...';
+        function showFormatExample() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="info">
+                    <h3>⚠️ Formato de imagen incorrecto</h3>
+                    <p>La API espera el formato completo data URL:</p>
+                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px; overflow-x: auto;">
+        data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcU...
+                    </pre>
+                    <p><strong>Solución:</strong> Ya estamos enviando el formato correcto. El problema puede ser:</p>
+                    <ul>
+                        <li>Imagen demasiado grande (> 500KB)</li>
+                        <li>Formato no JPEG (usar .toDataURL('image/jpeg'))</li>
+                        <li>Problema temporal del servidor</li>
+                    </ul>
+                    <button onclick="testWithSmallImage()">🧪 Probar con imagen pequeña</button>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+        
+        function displayResults(data) {
+    const resultDiv = document.getElementById('result');
+    
+    if (data.data && data.data.object === "obverse_ocr_readings") {
+        const hasData = data.data.parse_ocr && data.data.parse_ocr.length > 0;
+        const hasText = data.data.ocr && data.data.ocr.trim().length > 0;
+        
+        if (hasData || hasText) {
+            // Guardar datos en localStorage para pasarlos a resultados.html
+            localStorage.setItem('verificationData', JSON.stringify(data));
+            localStorage.setItem('verificationPhotos', JSON.stringify(photos));
+            
+            // Redirigir a la página de resultados
+            setTimeout(() => {
+                window.location.href = 'resultados.html';
+            }, 1500);
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h2>✅ LECTURA OCR EXITOSA</h2>
+                    <p>Redirigiendo a resultados...</p>
+                    <div class="loading-spinner" style="margin: 20px auto;"></div>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            
+        } else {
+            resultDiv.innerHTML = `
+                <div class="warning">
+                    <h2>⚠️ OCR completado sin datos</h2>
+                    <p>El OCR se ejecutó correctamente pero no detectó texto.</p>
+                    <button onclick="resetDemo()" style="background: #6c757d;">
+                        🔄 Reintentar
+                    </button>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+        
+    } else if (data.data && data.data.isMatch !== undefined) {
+        // Para comparación facial también redirigir
+        localStorage.setItem('verificationData', JSON.stringify(data));
+        localStorage.setItem('verificationPhotos', JSON.stringify(photos));
+        
+        setTimeout(() => {
+            window.location.href = 'resultados.html';
+        }, 1500);
+        
+        resultDiv.innerHTML = `
+            <div class="${data.data.isMatch ? 'success' : 'error'}">
+                <h2>${data.data.isMatch ? '✅ COINCIDENCIA' : '❌ NO COINCIDE'}</h2>
+                <p>${data.data.isMatch ? 'La selfie coincide con la foto del INE' : 'La selfie NO coincide con la foto del INE'}</p>
+                <p>Redirigiendo a resultados...</p>
+                <div class="loading-spinner" style="margin: 20px auto;"></div>
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+        
+    } else {
+        // Cualquier otro resultado también redirige
+        localStorage.setItem('verificationData', JSON.stringify(data));
+        localStorage.setItem('verificationPhotos', JSON.stringify(photos));
+        
+        setTimeout(() => {
+            window.location.href = 'resultados.html';
+        }, 1500);
+        
+        resultDiv.innerHTML = `
+            <div>
+                <h2>📋 Procesando resultados...</h2>
+                <p>Redirigiendo a página de resultados</p>
+                <div class="loading-spinner" style="margin: 20px auto;"></div>
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    }
+}
+        // ============================================
+        // FUNCIONES DE UTILIDAD
+        // ============================================
+        
+        function showStep(step) {
+            console.log(`Mostrando paso ${step}`);
+            
+            // Ocultar todos los pasos
+            for (let i = 1; i <= 4; i++) {
+                const stepEl = document.getElementById(`step${i}`);
+                if (stepEl) stepEl.classList.remove('active');
             }
             
-            // Actualizar estado inicial
-            updateCameraStatus('Trasera');
-            updateLastAction('Iniciando...');
-        });
+            // Mostrar paso actual
+            const currentStepEl = document.getElementById(`step${step}`);
+            if (currentStepEl) {
+                currentStepEl.classList.add('active');
+                currentStep = step;
+            }
+            
+            // Actualizar indicador de paso
+            updateStepIndicator(step);
+            
+            // Actualizar mensaje de cámara
+            updateCameraMessage(step);
+        }
         
-        // Funciones de estado (llamadas desde camera.js)
+        function getStepName(stepNumber) {
+            switch(stepNumber) {
+                case 1: return 'INE Frontal';
+                case 2: return 'INE Trasero';
+                case 3: return 'Selfie';
+                default: return 'Foto';
+            }
+        }
+        
+        function updateCameraMessage(step) {
+            const messageDiv = document.getElementById('camera-message');
+            if (!messageDiv) return;
+            
+            if (step === 3) {
+                messageDiv.innerHTML = `
+                    <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #1976d2;">
+                        <strong>📱 Selfie con cámara frontal:</strong> 
+                        <span style="color: #1976d2;">Mírate a la cámara frontal del dispositivo. Asegúrate de que tu rostro esté bien iluminado.</span>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div style="background: #f3e5f5; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #7b1fa2;">
+                        <strong>📷 Cámara trasera:</strong> 
+                        <span style="color: #7b1fa2;">Apoya el INE sobre una superficie plana y bien iluminada</span>
+                    </div>
+                `;
+            }
+        }
+        
+        function updateStepIndicator(step) {
+            const indicator = document.getElementById('step-indicator');
+            if (indicator) {
+                indicator.textContent = `Paso ${step} de 4`;
+            }
+        }
+        
+        function updatePhotosCount() {
+            const count = Object.values(photos).filter(photo => photo !== null).length;
+            const countElement = document.getElementById('photos-count');
+            if (countElement) {
+                countElement.textContent = `${count}/3`;
+            }
+        }
+        
         function updateCameraStatus(status) {
             const statusEl = document.getElementById('camera-status');
             if (statusEl) statusEl.textContent = status;
@@ -266,12 +1533,88 @@
             if (actionEl) actionEl.textContent = action;
         }
         
-        function updateStepIndicator(step) {
-            const indicator = document.getElementById('step-indicator');
-            if (indicator) {
-                indicator.textContent = `Paso ${step} de 4`;
+        function resetDemo() {
+            console.log('=== REINICIANDO DEMO COMPLETA ===');
+            updateLastAction('Reiniciando demo...');
+            
+            // Resetear fotos
+            photos = {
+                ine_front: null,
+                ine_back: null,
+                selfie: null
+            };
+            
+            // Limpiar previews
+            for (let i = 1; i <= 3; i++) {
+                const preview = document.getElementById(`preview${i}`);
+                if (preview) preview.innerHTML = `
+                    <div class="text-center p-4">
+                        <span class="material-symbols-outlined text-gray-400 text-4xl mb-2">photo_camera</span>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm">La foto capturada aparecerá aquí</p>
+                    </div>
+                `;
             }
+            
+            // Limpiar resultados
+            const resultDiv = document.getElementById('result');
+            if (resultDiv) {
+                resultDiv.innerHTML = '';
+                resultDiv.style.display = 'none';
+            }
+            
+            // Ocultar loading
+            const loadingDiv = document.getElementById('loading');
+            if (loadingDiv) loadingDiv.style.display = 'none';
+            
+            // Actualizar contador
+            updatePhotosCount();
+            
+            // Volver al paso 1
+            showStep(1);
+            
+            // Reiniciar cámara trasera
+            setTimeout(() => {
+                initCamera('back');
+            }, 300);
+            
+            console.log('Demo reiniciada');
+            updateLastAction('Demo reiniciada con cámara trasera');
         }
+        
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            updateLastAction('Modo oscuro cambiado');
+        }
+        
+        function toggleHelp() {
+            alert('Ayuda: \n1. Asegura buena iluminación\n2. Evita reflejos\n3. Mantén el documento estable\n4. Sigue las guías en pantalla');
+        }
+        
+        // ============================================
+        // HACER FUNCIONES GLOBALES
+        // ============================================
+        window.initCamera = initCamera;
+        window.capturePhoto = capturePhoto;
+        window.useTestImage = useTestImage;
+        window.skipStep = skipStep;
+        window.restartCamera = restartCamera;
+        window.resetDemo = resetDemo;
+        window.showStep = showStep;
+        window.toggleHelp = toggleHelp;
+        window.toggleDarkMode = toggleDarkMode;
+        window.validateIdentity = validateIdentity;
+        window.tryComparison = tryComparison;
+        window.startComparison = startComparison;
+        window.startValidation = startValidation;
+        window.testSimpleEndpoint = testSimpleEndpoint;
+        window.testWithSmallImage = testWithSmallImage;
+        window.adjustCameraSettings = adjustCameraSettings;
+        
+        // Variables globales
+        window.photos = photos;
+        window.currentStep = currentStep;
+        window.cameraStream = cameraStream;
+        window.VERIFICAMEX_TOKEN = VERIFICAMEX_TOKEN;
     </script>
 </body>
 </html>

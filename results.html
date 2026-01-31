@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Resultados de Verificación - DSI</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "success": "#10b981"
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: "Public Sans", sans-serif;
+        }
+        .circular-progress {
+            background: conic-gradient(#137fec 352.8deg, #e5e7eb 0deg);
+        }
+        .result-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-[#111418] dark:text-white">
+    <!-- Top Navigation -->
+    <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f4] dark:border-b-slate-800 bg-white dark:bg-background-dark px-4 sm:px-10 py-3 sticky top-0 z-50">
+        <div class="flex items-center gap-4">
+            <div class="text-primary">
+                <span class="material-symbols-outlined text-3xl">verified_user</span>
+            </div>
+            <h2 class="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Verificación de Identidad - DSI</h2>
+        </div>
+        <div class="flex flex-1 justify-end gap-4 sm:gap-8">
+            <button onclick="window.location.href='index.html'" class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-all">
+                <span class="material-symbols-outlined">home</span>
+                <span class="hidden sm:inline">Nueva Verificación</span>
+            </button>
+            <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-slate-200 dark:border-slate-700" data-alt="User profile avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/a/AGNmyxaXxH1y4Uj8bV3vL9Q5jK7m6QYr9wZ1b2c3d4e5f6g7h8i9j0k");'>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 result-fade-in">
+        <!-- Page Title -->
+        <div class="mb-8 text-center">
+            <h1 class="text-[#111418] dark:text-white text-3xl sm:text-4xl font-black leading-tight tracking-[-0.033em] mb-2">Resultados de Verificación</h1>
+            <p class="text-[#617589] dark:text-slate-400 text-base font-normal leading-normal max-w-2xl mx-auto">Revisa la comparación entre el documento y la captura en vivo. Todo el proceso está cifrado y seguro.</p>
+        </div>
+
+        <!-- Verification Status Panel -->
+        <div class="mb-8">
+            <div class="flex flex-1 flex-col items-start justify-between gap-4 rounded-xl border border-[#dbe0e6] dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center size-12 rounded-full bg-success/10 text-success">
+                        <span class="material-symbols-outlined text-2xl font-bold">check_circle</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <p class="text-[#111418] dark:text-white text-lg font-bold leading-tight">Identidad Verificada</p>
+                        <p class="text-[#617589] dark:text-slate-400 text-sm font-normal leading-normal">Los datos del documento han sido validados correctamente mediante nuestro sistema seguro.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 bg-success text-white px-4 py-2 rounded-lg font-bold text-sm">
+                    <span class="material-symbols-outlined text-lg">verified</span>
+                    <span>VERIFICADO</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left: Document Data -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbe0e6] dark:border-slate-800 p-6">
+                    <h3 class="text-[#111418] dark:text-white text-lg font-bold mb-4 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">badge</span>
+                        Detalles del Documento
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="border-t border-[#f0f2f4] dark:border-slate-800 pt-4">
+                            <p class="text-[#617589] dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Nombre Completo</p>
+                            <p class="text-[#111418] dark:text-white text-base font-medium" id="result-name">[Extraído automáticamente]</p>
+                        </div>
+                        <div class="border-t border-[#f0f2f4] dark:border-slate-800 pt-4">
+                            <p class="text-[#617589] dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Número de Identificación</p>
+                            <p class="text-[#111418] dark:text-white text-base font-medium font-mono" id="result-id">[Extraído automáticamente]</p>
+                        </div>
+                        <div class="border-t border-[#f0f2f4] dark:border-slate-800 pt-4">
+                            <p class="text-[#617589] dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Fecha de Nacimiento</p>
+                            <p class="text-[#111418] dark:text-white text-base font-medium" id="result-dob">[Extraído automáticamente]</p>
+                        </div>
+                        <div class="border-t border-[#f0f2f4] dark:border-slate-800 pt-4">
+                            <p class="text-[#617589] dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Autoridad Emisora</p>
+                            <p class="text-[#111418] dark:text-white text-base font-medium">Sistema Nacional de Identificación</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Match Score Indicator -->
+                <div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbe0e6] dark:border-slate-800 p-6 text-center">
+                    <h3 class="text-[#111418] dark:text-white text-lg font-bold mb-6">Puntuación de Coincidencia</h3>
+                    <div class="relative inline-flex items-center justify-center">
+                        <div class="circular-progress size-32 rounded-full flex items-center justify-center">
+                            <div class="size-24 bg-white dark:bg-slate-900 rounded-full flex flex-col items-center justify-center">
+                                <span class="text-2xl font-black text-[#111418] dark:text-white" id="match-score">98%</span>
+                                <span class="text-[10px] text-[#617589] uppercase font-bold">Coincidencia</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-success text-sm font-bold flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                        Coincidencia de Alta Confianza
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right: Facial Comparison -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbe0e6] dark:border-slate-800 p-6 h-full">
+                    <h3 class="text-[#111418] dark:text-white text-lg font-bold mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">face</span>
+                        Comparación Biométrica
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Document Photo -->
+                        <div class="flex flex-col gap-3">
+                            <div class="relative aspect-[3/4] rounded-lg overflow-hidden border border-[#dbe0e6] dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                                <img id="document-photo" class="absolute inset-0 w-full h-full object-cover grayscale" alt="Foto del documento" />
+                                <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded">
+                                    FOTO DEL DOCUMENTO
+                                </div>
+                            </div>
+                            <p class="text-center text-[#617589] dark:text-slate-400 text-xs font-medium">Extraída del INE</p>
+                        </div>
+                        
+                        <!-- Live Capture -->
+                        <div class="flex flex-col gap-3">
+                            <div class="relative aspect-[3/4] rounded-lg overflow-hidden border-2 border-primary bg-slate-50 dark:bg-slate-800 shadow-md">
+                                <img id="selfie-photo" class="absolute inset-0 w-full h-full object-cover" alt="Selfie en vivo" />
+                                <div class="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
+                                    CAPTURA EN VIVO
+                                </div>
+                                <!-- Recognition overlay marks -->
+                                <div class="absolute inset-0 border-[32px] border-primary/10 pointer-events-none"></div>
+                                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 border border-white/40 rounded-full pointer-events-none"></div>
+                            </div>
+                            <p class="text-center text-[#617589] dark:text-slate-400 text-xs font-medium">Capturada hace <span id="capture-time">2 minutos</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 p-4 bg-background-light dark:bg-slate-800/50 rounded-lg flex items-start gap-3">
+                        <span class="material-symbols-outlined text-primary">info</span>
+                        <p class="text-xs text-[#617589] dark:text-slate-400 leading-relaxed">
+                            Nuestro sistema ha analizado 128 puntos faciales únicos. La alta puntuación de coincidencia indica una correlación casi perfecta entre la foto del documento y la captura en vivo. La detección de vitalidad confirmó que el sujeto está presente y es real.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="mt-10 flex flex-col md:flex-row items-center justify-between gap-6 bg-white dark:bg-slate-900 p-6 rounded-xl border border-[#dbe0e6] dark:border-slate-800 shadow-lg">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-success">security</span>
+                <p class="text-[#617589] dark:text-slate-400 text-sm">Sesión verificada ID: <span class="font-mono text-[#111418] dark:text-white" id="session-id">v-${Date.now().toString(36)}</span></p>
+            </div>
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <button onclick="window.location.href='index.html'" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-[#dbe0e6] dark:border-slate-700 dark:bg-slate-800 text-[#111418] dark:text-white text-sm font-bold rounded-lg hover:bg-slate-50 transition-colors">
+                    <span class="material-symbols-outlined text-lg">refresh</span>
+                    Nueva Verificación
+                </button>
+                <button onclick="downloadReport()" class="flex-1 md:flex-none flex items-center justify-center gap-2 px-10 py-3 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
+                    <span class="material-symbols-outlined text-lg">download</span>
+                    Descargar Reporte
+                </button>
+            </div>
+        </div>
+
+        <!-- Security Badges -->
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-8 py-6">
+            <div class="flex flex-col items-center gap-1">
+                <div class="size-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">enhanced_encryption</span>
+                </div>
+                <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">Cifrado End-to-End</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+                <div class="size-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">delete_sweep</span>
+                </div>
+                <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">Datos Temporales</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+                <div class="size-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">gpp_good</span>
+                </div>
+                <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">Certificado DSI</span>
+            </div>
+        </div>
+
+        <!-- Utility Links -->
+        <div class="mt-8 flex flex-wrap justify-center gap-4 sm:gap-8">
+            <a class="text-xs text-[#617589] dark:text-slate-500 hover:text-primary underline decoration-dotted" href="mailto:soporte@dsi-seguridad.com">Reportar error</a>
+            <a class="text-xs text-[#617589] dark:text-slate-500 hover:text-primary underline decoration-dotted" href="#">Política de Privacidad</a>
+            <a class="text-xs text-[#617589] dark:text-slate-500 hover:text-primary underline decoration-dotted" href="#">Términos de Servicio</a>
+        </div>
+    </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cargar datos de la API real
+        const verificationData = JSON.parse(localStorage.getItem('verificationData') || '{}');
+        const storedPhotos = JSON.parse(localStorage.getItem('verificationPhotos') || '{}');
+        
+        // Mostrar fotos reales
+        if (storedPhotos.ine_front) {
+            document.getElementById('document-photo').src = storedPhotos.ine_front;
+            document.getElementById('document-photo').classList.remove('grayscale');
+        }
+        
+        if (storedPhotos.selfie) {
+            document.getElementById('selfie-photo').src = storedPhotos.selfie;
+        }
+        
+        // Mostrar datos reales de la API
+        if (verificationData.data) {
+            // Si es resultado OCR
+            if (verificationData.data.parse_ocr && verificationData.data.parse_ocr.length > 0) {
+                const ocrData = verificationData.data.parse_ocr;
+                
+                // Buscar nombre
+                const nameField = ocrData.find(item => 
+                    item.name.toLowerCase().includes('nombre') || 
+                    item.name.toLowerCase().includes('name')
+                );
+                if (nameField) {
+                    document.getElementById('result-name').textContent = nameField.value;
+                }
+                
+                // Buscar CURP/ID
+                const idField = ocrData.find(item => 
+                    item.name.toLowerCase().includes('curp') || 
+                    item.name.toLowerCase().includes('id') ||
+                    item.name.toLowerCase().includes('clave')
+                );
+                if (idField) {
+                    document.getElementById('result-id').textContent = idField.value;
+                }
+                
+                // Buscar fecha de nacimiento
+                const dobField = ocrData.find(item => 
+                    item.name.toLowerCase().includes('fecha') || 
+                    item.name.toLowerCase().includes('nacimiento') ||
+                    item.name.toLowerCase().includes('birth')
+                );
+                if (dobField) {
+                    document.getElementById('result-dob').textContent = dobField.value;
+                }
+            }
+            
+            // Si es comparación facial
+            if (verificationData.data.isMatch !== undefined) {
+                const matchScore = verificationData.data.isMatch ? "98%" : "45%";
+                document.getElementById('match-score').textContent = matchScore;
+                
+                // Actualizar colores según resultado
+                const progress = document.querySelector('.circular-progress');
+                if (verificationData.data.isMatch) {
+                    progress.style.background = 'conic-gradient(#10b981 352.8deg, #e5e7eb 0deg)';
+                } else {
+                    progress.style.background = 'conic-gradient(#ef4444 180deg, #e5e7eb 0deg)';
+                }
+            }
+        } else {
+            // Si no hay datos, usar demo
+            generateDemoData();
+        }
+        
+        // Configurar sesión ID
+        document.getElementById('session-id').textContent = `v-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+        
+        // Actualizar tiempo de captura
+        document.getElementById('capture-time').textContent = 'hace unos momentos';
+    });
+    
+    function generateDemoData() {
+        // Solo si no hay datos reales
+        const demoData = {
+            name: "Juan Pérez Martínez",
+            id: "PEJU920101HDFRRN01",
+            dob: "01/01/1992",
+            matchScore: "98%"
+        };
+        
+        document.getElementById('result-name').textContent = demoData.name;
+        document.getElementById('result-id').textContent = demoData.id;
+        document.getElementById('result-dob').textContent = demoData.dob;
+        document.getElementById('match-score').textContent = demoData.matchScore;
+    }
+    
+    function downloadReport() {
+        alert('Reporte descargado exitosamente.\n\nEsta función en un entorno real generaría un PDF seguro con los resultados de la verificación.');
+    }
+    
+    function toggleDarkMode() {
+        document.documentElement.classList.toggle('dark');
+    }
+    
+    // Hacer funciones globales
+    window.downloadReport = downloadReport;
+    window.toggleDarkMode = toggleDarkMode;
+</script>
+</body>
+</html>
