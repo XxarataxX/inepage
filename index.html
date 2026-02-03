@@ -107,6 +107,47 @@
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
         .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        /* Estilos para el modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            min-width: 300px;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .loader-small {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #137fec;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display transition-colors duration-300">
@@ -129,6 +170,22 @@
         </div>
     </header>
 
+    <!-- Modal para confirmación de foto -->
+    <div id="photo-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="text-center">
+                <div class="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-success text-3xl">check_circle</span>
+                </div>
+                <h3 id="modal-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2">Foto Tomada con Éxito</h3>
+                <p id="modal-message" class="text-gray-600 dark:text-gray-400 mb-6">La foto se ha capturado correctamente.</p>
+                <button onclick="closeModal()" id="modal-button" class="bg-primary text-white font-bold px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">
+                    Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay (Necesario para app.js) -->
     <div id="loading" class="loading-overlay">
         <div class="text-center">
@@ -140,7 +197,7 @@
     <!-- Main Content Container -->
     <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-10 py-8">
         <!-- Breadcrumbs -->
-       <div class="flex flex-wrap gap-2 mb-6">
+        <div class="flex flex-wrap gap-2 mb-6">
             <span class="text-gray-900 dark:text-white text-sm font-medium">Captura de Documento</span>
             <span class="text-gray-400 text-sm">/</span>
             <span id="step-indicator" class="text-primary text-sm font-medium">Paso 1 de 4</span>
@@ -230,15 +287,12 @@
                     <!-- Right Column: Status & Preview -->
                     <div class="lg:col-span-4 flex flex-col gap-6">
                         <!-- Photo Preview -->
-                        <!-- <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-                            <h3 class="text-gray-900 dark:text-white font-bold text-lg mb-4">Previsualización</h3> -->
-                            <div id="preview1" class="min-h-[200px] flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-                                <!-- <div class="text-center p-4">
-                                    <span class="material-symbols-outlined text-gray-400 text-4xl mb-2">photo_camera</span>
-                                    <p class="text-gray-500 dark:text-gray-400 text-sm">La foto capturada aparecerá aquí</p>
-                                </div> -->
+                        <div id="preview1" class="min-h-[200px] flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
+                            <div class="text-center p-4">
+                                <span class="material-symbols-outlined text-gray-400 text-4xl mb-2">photo_camera</span>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">La foto capturada aparecerá aquí</p>
                             </div>
-                        <!-- </div> -->
+                        </div>
                         
                         <!-- Status Panel -->
                         <div class="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
@@ -282,7 +336,7 @@
                                     </div>
                                     <div>
                                         <p class="text-gray-900 dark:text-white font-medium text-sm">Selfie</p>
-                                        <p class="text-gray-500 dark:text-gray-400 text-xs">Pendiente</p>
+                                        <p class="text-gray-500 dark:text-gray-300 text-xs">Pendiente</p>
                                     </div>
                                 </div>
                             </div>
@@ -699,6 +753,56 @@
     let currentStep = 1;
     let cameraStream = null;
     let currentCameraType = 'back';
+    let lastPhotoStep = 0; // Para saber qué foto se acaba de tomar
+    
+    // ============================================
+    // FUNCIONES PARA EL MODAL
+    // ============================================
+    
+    function showModal(stepNumber, isSelfie = false) {
+        const modal = document.getElementById('photo-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalButton = document.getElementById('modal-button');
+        
+        // Configurar el contenido según el paso
+        if (isSelfie) {
+            modalTitle.textContent = "¡Selfie Tomada con Éxito!";
+            modalMessage.textContent = "Tu selfie se ha capturado correctamente. Al cerrar este modal se iniciará la validación completa automáticamente.";
+            modalButton.textContent = "Iniciar Validación";
+            modalButton.onclick = function() {
+                closeModal();
+                // Ejecutar la validación completa después de un breve delay
+                setTimeout(() => {
+                    completeVerification();
+                }, 300);
+            };
+        } else {
+            const stepNames = {
+                1: "Frente del INE",
+                2: "Reverso del INE"
+            };
+            modalTitle.textContent = "Foto Tomada con Éxito";
+            modalMessage.textContent = `${stepNames[stepNumber] || "La foto"} se ha capturado correctamente.`;
+            modalButton.textContent = "Continuar";
+            modalButton.onclick = closeModal;
+        }
+        
+        // Mostrar el modal
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Evitar scroll
+    }
+    
+    function closeModal() {
+        const modal = document.getElementById('photo-modal');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restaurar scroll
+        
+        // Si no es selfie, avanzar al siguiente paso
+        if (lastPhotoStep > 0 && lastPhotoStep < 3) {
+            showStep(lastPhotoStep + 1);
+        }
+    }
     
     // ============================================
     // INICIALIZACIÓN
@@ -715,7 +819,7 @@
     });
     
     // ============================================
-    // FUNCIONES DE CÁMARA
+    // FUNCIONES DE CÁMARA (MODIFICADAS)
     // ============================================
     
     async function initCamera(cameraType) {
@@ -842,7 +946,7 @@
         }
     }
     
-    // MODIFICADA: Ya no redirige al paso 4 automáticamente después de selfie
+    // MODIFICADA: Ahora muestra el modal después de capturar
     function capturePhoto(stepNumber) {
         try {
             console.log(`Capturando foto para paso ${stepNumber}`);
@@ -902,6 +1006,9 @@
             
             updateLastAction(`${getStepName(stepNumber)} capturada con cámara ${stepNumber === 3 ? 'frontal' : 'trasera'}`);
             
+            // Guardar el paso para el modal
+            lastPhotoStep = stepNumber;
+            
             // Si estamos en paso 2 (INE trasero), cambiar a cámara frontal para el selfie
             if (stepNumber === 2) {
                 console.log('Cambiando a cámara frontal para selfie...');
@@ -913,15 +1020,9 @@
             // Actualizar contador
             updatePhotosCount();
             
-            // MODIFICADO: Solo avanzar automáticamente si no es el último paso
-            if (stepNumber < 3) {
-                showStep(stepNumber + 1);
-            } else {
-                // Para el selfie (paso 3), quedarse en el mismo paso
-                console.log('Selfie capturada. Esperando validación...');
-                updateLastAction('Selfie capturada. Listo para validación.');
-                // No mostramos el paso 4 automáticamente
-            }
+            // Mostrar modal de confirmación
+            const isSelfie = stepNumber === 3;
+            showModal(stepNumber, isSelfie);
             
         } catch (error) {
             console.error('Error capturando foto:', error);
@@ -930,37 +1031,7 @@
         }
     }
     
-    function restartCamera() {
-        console.log('Reiniciando cámara...');
-        updateLastAction('Reiniciando cámara...');
-        
-        // Determinar qué cámara usar según el paso actual
-        const cameraType = currentStep === 3 ? 'front' : 'back';
-        
-        // Detener stream actual
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(track => track.stop());
-            cameraStream = null;
-        }
-        
-        // Limpiar videos
-        for (let i = 1; i <= 3; i++) {
-            const video = document.getElementById(`video${i}`);
-            if (video) {
-                video.srcObject = null;
-            }
-        }
-        
-        // Pequeña pausa
-        setTimeout(async () => {
-            // Reiniciar con la cámara apropiada
-            const result = await initCamera(cameraType);
-            if (result) {
-                updateLastAction(`Cámara ${cameraType} reiniciada`);
-            }
-        }, 300);
-    }
-    
+    // MODIFICADA: Ahora muestra el modal también
     function useTestImage(stepNumber) {
         console.log(`Usando imagen de prueba para paso ${stepNumber}`);
         
@@ -1072,13 +1143,15 @@
             }, 300);
         }
         
+        // Guardar el paso para el modal
+        lastPhotoStep = stepNumber;
+        
         // Actualizar contador
         updatePhotosCount();
         
-        // Avanzar
-        setTimeout(() => {
-            showStep(stepNumber + 1);
-        }, 500);
+        // Mostrar modal de confirmación
+        const isSelfie = stepNumber === 3;
+        showModal(stepNumber, isSelfie);
     }
     
     function skipStep(stepNumber) {
@@ -1094,6 +1167,37 @@
         }
         
         showStep(stepNumber + 1);
+    }
+    
+    function restartCamera() {
+        console.log('Reiniciando cámara...');
+        updateLastAction('Reiniciando cámara...');
+        
+        // Determinar qué cámara usar según el paso actual
+        const cameraType = currentStep === 3 ? 'front' : 'back';
+        
+        // Detener stream actual
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        
+        // Limpiar videos
+        for (let i = 1; i <= 3; i++) {
+            const video = document.getElementById(`video${i}`);
+            if (video) {
+                video.srcObject = null;
+            }
+        }
+        
+        // Pequeña pausa
+        setTimeout(async () => {
+            // Reiniciar con la cámara apropiada
+            const result = await initCamera(cameraType);
+            if (result) {
+                updateLastAction(`Cámara ${cameraType} reiniciada`);
+            }
+        }, 300);
     }
     
     // ============================================
@@ -1492,7 +1596,7 @@
                 <div class="bg-gray-100 dark:bg-gray-800 rounded-full h-4">
                     <div class="bg-primary rounded-full h-4" style="width: ${confidence}%"></div>
                 </div>
-               
+                <p class="text-sm text-gray-600 dark:text-gray-400">Confianza: ${confidence.toFixed(1)}%</p>
                 ${faceComparison.data.message ? `<p class="text-sm">${faceComparison.data.message}</p>` : ''}
             </div>
         `;
@@ -1701,6 +1805,10 @@
         document.getElementById('step4-actions').style.display = 'none';
         document.getElementById('step4-message').style.display = 'block';
         
+        // Cerrar modal si está abierto
+        const modal = document.getElementById('photo-modal');
+        if (modal) modal.style.display = 'none';
+        
         // Actualizar contador
         updatePhotosCount();
         
@@ -1786,6 +1894,8 @@
     window.startValidation = startValidation;
     window.testSimpleEndpoint = testSimpleEndpoint;
     window.downloadResults = downloadResults;
+    window.showModal = showModal;
+    window.closeModal = closeModal;
     
     // Variables globales
     window.photos = photos;
